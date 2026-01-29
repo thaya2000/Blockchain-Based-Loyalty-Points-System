@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ============================================
    CSS Variables & Theme
    ============================================ */
@@ -51,7 +55,8 @@
   --spacing-2xl: 48px;
 
   /* Typography */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family: 'Space Grotesk', sans-serif;
+  --font-family-display: 'Fraunces', 'Space Grotesk', serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
@@ -108,6 +113,30 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+}
+
+/* ============================================
+   Motion
+   ============================================ */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ============================================
@@ -579,26 +608,123 @@ button {
    Wallet Adapter Overrides
    ============================================ */
 .wallet-adapter-button {
-  background: var(--gradient-primary) !important;
-  border-radius: var(--border-radius-md) !important;
+  background: linear-gradient(135deg, #14f195, #9945ff) !important;
+  border-radius: 12px !important;
   font-family: var(--font-family) !important;
-  font-weight: 500 !important;
-  transition: all var(--transition-fast) !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  border: none !important;
+  padding: 12px 24px !important;
+}
+
+/* Change "Select Wallet" to "Connect Wallet" */
+.wallet-adapter-button-trigger:not(.wallet-adapter-button-trigger-active)::before {
+  content: 'Connect Wallet' !important;
+  font-size: 14px !important;
+}
+
+.wallet-adapter-button-trigger:not(.wallet-adapter-button-trigger-active) {
+  font-size: 0 !important;
 }
 
 .wallet-adapter-button:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: var(--shadow-glow) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 8px 24px rgba(20, 241, 149, 0.4) !important;
 }
 
 .wallet-adapter-modal-wrapper {
-  background: var(--bg-secondary) !important;
-  border-radius: var(--border-radius-xl) !important;
+  background: rgba(10, 15, 30, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(20, 241, 149, 0.2) !important;
 }
 
 .wallet-adapter-modal-title {
-  color: var(--text-primary) !important;
+  color: white !important;
   font-family: var(--font-family) !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  margin-bottom: 24px !important;
+}
+
+.wallet-adapter-modal-list {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+.wallet-adapter-modal-list-more {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+.wallet-adapter-button:not([disabled]):hover {
+  background: linear-gradient(135deg, #0fcf7f, #7e37d4) !important;
+}
+
+.wallet-adapter-modal-wrapper {
+  background: rgba(10, 15, 30, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(20, 241, 149, 0.2) !important;
+}
+
+.wallet-adapter-modal-title {
+  color: white !important;
+  font-family: var(--font-family) !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  margin-bottom: 24px !important;
+}
+
+.wallet-adapter-modal-list {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+.wallet-adapter-modal-list-more {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+.wallet-adapter-button:not([disabled]):hover {
+  background: linear-gradient(135deg, #0fcf7f, #7e37d4) !important;
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% auto;
+  animation: gradient 3s ease infinite;
 }
 
 /* ============================================

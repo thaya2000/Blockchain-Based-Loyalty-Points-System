@@ -6,6 +6,9 @@ import merchantsRouter from './routes/merchants.js';
 import usersRouter from './routes/users.js';
 import rewardsRouter from './routes/rewards.js';
 import transactionsRouter from './routes/transactions.js';
+import productsRouter from './routes/products.js';
+import ordersRouter from './routes/orders.js';
+import adminRouter from './routes/admin.js';
 
 // Load environment variables
 dotenv.config({ path: '../.env' });
@@ -48,6 +51,9 @@ app.use('/api/merchants', merchantsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/transactions', transactionsRouter);
+app.use('/api/products', productsRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/admin', adminRouter);
 
 // Platform info endpoint
 app.get('/api/platform', async (_req: Request, res: Response) => {

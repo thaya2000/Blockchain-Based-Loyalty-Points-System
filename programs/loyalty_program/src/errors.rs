@@ -37,4 +37,16 @@ pub enum LoyaltyError {
 
     #[msg("Reference string too long - max 64 characters")]
     ReferenceTooLong,
+    
+    #[msg("Invalid protocol treasury address")]
+    InvalidTreasury,
+    
+    #[msg("Insufficient SOL balance to pay protocol fee")]
+    InsufficientFeePayment,
+    
+    #[msg("Invalid payment type")]
+    InvalidPaymentType,
+    
+    #[msg("Product ID is required")]
+    MissingProductId,
 }

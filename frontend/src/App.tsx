@@ -5,7 +5,10 @@ import {
   WalletProvider,
 } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { 
+  PhantomWalletAdapter, 
+  SolflareWalletAdapter,
+} from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
 
 import Navbar from './components/Navbar';
@@ -13,6 +16,8 @@ import HomePage from './pages/HomePage';
 import ConsumerDashboard from './pages/ConsumerDashboard';
 import MerchantDashboard from './pages/MerchantDashboard';
 import RewardsPage from './pages/RewardsPage';
+import AdminDashboard from './pages/AdminDashboard';
+import ProductMarketplace from './pages/ProductMarketplace';
 
 // Import wallet adapter styles
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -29,13 +34,14 @@ const App: FC = () => {
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
+      // Backpack is detected automatically by the wallet adapter
     ],
     []
   );
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect={false}>
         <WalletModalProvider>
           <BrowserRouter>
             <div className="app">
@@ -46,6 +52,8 @@ const App: FC = () => {
                   <Route path="/dashboard" element={<ConsumerDashboard />} />
                   <Route path="/merchant" element={<MerchantDashboard />} />
                   <Route path="/rewards" element={<RewardsPage />} />
+                  <Route path="/marketplace" element={<ProductMarketplace />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
                 </Routes>
               </main>
             </div>

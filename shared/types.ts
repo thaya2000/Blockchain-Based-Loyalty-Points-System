@@ -16,8 +16,41 @@ export interface Merchant {
   businessName: string;
   category?: string;
   logoUrl?: string;
+  status: 'pending' | 'approved' | 'rejected';
   isActive: boolean;
   registeredAt: Date;
+  approvedAt?: Date;
+}
+
+export interface Product {
+  id: string;
+  merchantId: string;
+  name: string;
+  description?: string;
+  priceSol: number; // In lamports
+  priceLoyaltyPoints?: number; // In loyalty points (optional)
+  loyaltyPointsReward: number; // Points earned when bought with SOL
+  imageUrl?: string;
+  stockQuantity?: number; // NULL = unlimited
+  isAvailable: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  customerWallet: string;
+  merchantId: string;
+  productId: string;
+  paymentType: 'sol' | 'loyalty_points';
+  amountPaid: number; // In lamports or loyalty points
+  loyaltyPointsEarned: number; // Points earned (if paid with SOL)
+  txSignature?: string;
+  status: 'pending' | 'confirmed' | 'fulfilled' | 'cancelled';
+  createdAt: Date;
+  fulfilledAt?: Date;
+  updatedAt: Date;
 }
 
 export interface Reward {
@@ -64,6 +97,27 @@ export interface CreateRewardRequest {
   description?: string;
   pointsCost: number;
   imageUrl?: string;
+}
+
+export interface CreateProductRequest {
+  merchantId: string;
+  name: string;
+  description?: string;
+  priceSol: number;
+  priceLoyaltyPoints?: number;
+  loyaltyPointsReward: number;
+  imageUrl?: string;
+  stockQuantity?: number;
+}
+
+export interface CreateOrderRequest {
+  customerWallet: string;
+  productId: string;
+  paymentType: 'sol' | 'loyalty_points';
+}
+
+export interface ApproveMerchantRequest {
+  status: 'approved' | 'rejected';
 }
 
 export interface MintPointsRequest {

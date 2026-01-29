@@ -11,6 +11,14 @@ pub struct MintPoints<'info> {
     #[account(mut)]
     pub merchant: Signer<'info>,
 
+    /// Protocol treasury - receives minting fees
+    /// CHECK: This is validated against platform_state
+    #[account(
+        mut,
+        constraint = protocol_treasury.key() == platform_state.protocol_treasury @ LoyaltyError::InvalidTreasury
+    )]
+    pub protocol_treasury: AccountInfo<'info>,
+
     /// Platform state - for mint authority
     #[account(
         mut,
@@ -69,6 +77,34 @@ pub fn handler(
     let platform_state = &mut ctx.accounts.platform_state;
     let merchant_record = &mut ctx.accounts.merchant_record;
 
+    // Calculate protocol fee (CRITICAL: Must be paid before minting)
+    let base_fee = platform_state.base_mint_fee;
+    let rate = platform_state.fee_rate_per_thousand;
+    let points_in_thousands = (amount + 999) / 1000; // Round up
+    let variable_fee = points_in_thousands.checked_mul(rate)
+        .ok_or(LoyaltyError::ArithmeticOverflow)?;
+    let total_fee = base_fee.checked_add(variable_fee)
+        .ok_or(LoyaltyError::ArithmeticOverflow)?;
+
+    msg!("Protocol fee calculation: base={}, rate={}, points={}, total_fee={}",
+        base_fee, rate, amount, total_fee);
+
+    // ATOMIC STEP 1: Transfer protocol fee from merchant to treasury
+    anchor_lang::solana_program::program::invoke(
+        &anchor_lang::solana_program::system_instruction::transfer(
+            &ctx.accounts.merchant.key(),
+            &ctx.accounts.protocol_treasury.key(),
+            total_fee,
+        ),
+        &[
+            ctx.accounts.merchant.to_account_info(),
+            ctx.accounts.protocol_treasury.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+        ],
+    )?;
+
+    msg!("Protocol fee paid: {} lamports", total_fee);
+
     // Check mint allowance
     if merchant_record.mint_allowance > 0 {
         let remaining_allowance = merchant_record
@@ -93,7 +129,7 @@ pub fn handler(
         LoyaltyError::ExceedsMaxSupply
     );
 
-    // Mint tokens using PDA authority
+    // ATOMIC STEP 2: Mint tokens using PDA authority (only after fee paid)
     let seeds = &[
         PlatformState::SEED,
         &[platform_state.bump],
@@ -115,9 +151,18 @@ pub fn handler(
 
     // Update state
     platform_state.current_supply = new_supply;
+    platform_state.total_fees_collected = platform_state.total_fees_collected
+        .checked_add(total_fee)
+        .ok_or(LoyaltyError::ArithmeticOverflow)?;
+    
     merchant_record.total_minted = merchant_record
         .total_minted
         .checked_add(amount)
+        .ok_or(LoyaltyError::ArithmeticOverflow)?;
+    
+    merchant_record.total_fees_paid = merchant_record
+        .total_fees_paid
+        .checked_add(total_fee)
         .ok_or(LoyaltyError::ArithmeticOverflow)?;
 
     msg!(
@@ -131,6 +176,7 @@ pub fn handler(
         merchant: ctx.accounts.merchant.key(),
         consumer: ctx.accounts.consumer.key(),
         amount,
+        fee_paid: total_fee,
         purchase_reference,
         timestamp: Clock::get()?.unix_timestamp,
     });
@@ -143,6 +189,7 @@ pub struct PointsIssued {
     pub merchant: Pubkey,
     pub consumer: Pubkey,
     pub amount: u64,
+    pub fee_paid: u64,
     pub purchase_reference: String,
     pub timestamp: i64,
 }

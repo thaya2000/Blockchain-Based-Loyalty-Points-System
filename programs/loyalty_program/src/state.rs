@@ -10,6 +10,9 @@ pub struct PlatformState {
     /// The SPL token mint for loyalty points
     pub token_mint: Pubkey,
     
+    /// Protocol treasury for collecting fees
+    pub protocol_treasury: Pubkey,
+    
     /// Maximum total supply of loyalty tokens
     pub max_supply: u64,
     
@@ -24,6 +27,15 @@ pub struct PlatformState {
     
     /// Whether the platform is active
     pub is_active: bool,
+    
+    /// Base fee for minting (in lamports)
+    pub base_mint_fee: u64,
+    
+    /// Fee rate per 1000 loyalty points (in lamports)
+    pub fee_rate_per_thousand: u64,
+    
+    /// Total fees collected
+    pub total_fees_collected: u64,
     
     /// Bump seed for PDA
     pub bump: u8,
@@ -52,6 +64,9 @@ pub struct MerchantRecord {
     /// Total points redeemed at this merchant
     pub total_redeemed: u64,
     
+    /// Total fees paid by this merchant
+    pub total_fees_paid: u64,
+    
     /// Timestamp when merchant was registered
     pub registered_at: i64,
     
@@ -61,4 +76,37 @@ pub struct MerchantRecord {
 
 impl MerchantRecord {
     pub const SEED: &'static [u8] = b"merchant";
+}
+
+/// Product purchase record - stores product purchase details
+#[account]
+#[derive(InitSpace)]
+pub struct PurchaseRecord {
+    /// Customer wallet
+    pub customer: Pubkey,
+    
+    /// Merchant wallet
+    pub merchant: Pubkey,
+    
+    /// Product ID hash (32 bytes)
+    pub product_id_hash: [u8; 32],
+    
+    /// Payment type: 0 = SOL, 1 = Loyalty Points
+    pub payment_type: u8,
+    
+    /// Amount paid (in lamports for SOL, or token amount for points)
+    pub amount_paid: u64,
+    
+    /// Loyalty points earned (if paid with SOL)
+    pub points_earned: u64,
+    
+    /// Purchase timestamp
+    pub purchased_at: i64,
+    
+    /// Bump seed for PDA
+    pub bump: u8,
+}
+
+impl PurchaseRecord {
+    pub const SEED: &'static [u8] = b"purchase";
 }

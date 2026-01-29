@@ -17,8 +17,10 @@ pub mod loyalty_program {
         ctx: Context<InitializePlatform>,
         token_decimals: u8,
         max_supply: u64,
+        base_mint_fee: u64,
+        fee_rate_per_thousand: u64,
     ) -> Result<()> {
-        instructions::initialize::handler(ctx, token_decimals, max_supply)
+        instructions::initialize::handler(ctx, token_decimals, max_supply, base_mint_fee, fee_rate_per_thousand)
     }
 
     /// Register a new merchant (admin only)
@@ -41,6 +43,16 @@ pub mod loyalty_program {
         purchase_reference: String,
     ) -> Result<()> {
         instructions::mint_points::handler(ctx, amount, purchase_reference)
+    }
+
+    /// Purchase product with SOL and earn loyalty points
+    pub fn purchase_product_with_sol(
+        ctx: Context<PurchaseProductWithSol>,
+        product_id_hash: [u8; 32],
+        price_sol: u64,
+        loyalty_points_reward: u64,
+    ) -> Result<()> {
+        instructions::purchase_product::handler(ctx, product_id_hash, price_sol, loyalty_points_reward)
     }
 
     /// Redeem loyalty points at a merchant (consumer)

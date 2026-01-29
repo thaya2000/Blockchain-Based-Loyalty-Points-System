@@ -22,6 +22,12 @@ const Navbar: FC = () => {
           Home
         </Link>
         <Link
+          to="/marketplace"
+          className={`navbar-link ${isActive('/marketplace') ? 'active' : ''}`}
+        >
+          🛒 Shop
+        </Link>
+        <Link
           to="/dashboard"
           className={`navbar-link ${isActive('/dashboard') ? 'active' : ''}`}
         >
@@ -38,6 +44,12 @@ const Navbar: FC = () => {
           className={`navbar-link ${isActive('/merchant') ? 'active' : ''}`}
         >
           Merchant
+        </Link>
+        <Link
+          to="/admin"
+          className={`navbar-link ${isActive('/admin') ? 'active' : ''}`}
+        >
+          🛡️ Admin
         </Link>
       </div>
 

@@ -1,13 +1,16 @@
 import { FC, useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import ProductManagement from '../components/ProductManagement';
 
 interface MerchantInfo {
   id: string;
+  walletAddress: string;
   businessName: string;
   category?: string;
-  isActive: boolean;
-  onChainAuthorized: boolean;
+  status: string;
+  isActive?: boolean;
+  onChainAuthorized?: boolean;
 }
 
 const MerchantDashboard: FC = () => {
@@ -25,7 +28,7 @@ const MerchantDashboard: FC = () => {
 
       setLoading(true);
       try {
-        const response = await fetch(`/api/merchants/${publicKey.toBase58()}`);
+        const response = await fetch(`http://localhost:3001/api/merchants/${publicKey.toBase58()}`);
         const data = await response.json();
         if (data.success) {
           setMerchantInfo(data.data);
@@ -106,11 +109,11 @@ const MerchantDashboard: FC = () => {
                 <strong>Status:</strong>{' '}
                 <span
                   className={`btn btn-sm ${
-                    merchantInfo.onChainAuthorized ? 'btn-success' : 'btn-secondary'
+                    merchantInfo.status === 'approved' ? 'btn-success' : 'btn-secondary'
                   }`}
                   style={{ cursor: 'default' }}
                 >
-                  {merchantInfo.onChainAuthorized ? '✓ Authorized' : '✗ Not Authorized'}
+                  {merchantInfo.status === 'approved' ? '✓ Approved' : merchantInfo.status === 'pending' ? '⏳ Pending' : '✗ Rejected'}
                 </span>
               </p>
             </div>
@@ -185,13 +188,18 @@ const MerchantDashboard: FC = () => {
           <button
             type="submit"
             className="btn btn-primary btn-lg"
-            disabled={!merchantInfo?.onChainAuthorized}
+            disabled={merchantInfo?.status !== 'approved'}
             style={{ width: '100%' }}
           >
-            {merchantInfo?.onChainAuthorized ? 'Issue Points' : 'Not Authorized'}
+            {merchantInfo?.status === 'approved' ? 'Issue Points' : 'Not Authorized'}
           </button>
         </form>
       </div>
+
+      {/* Product Management */}
+      {merchantInfo && merchantInfo.status === 'approved' && (
+        <ProductManagement merchantId={merchantInfo.id} />
+      )}
 
       {/* Recent Transactions */}
       <div className="card" style={{ marginTop: '24px' }}>
