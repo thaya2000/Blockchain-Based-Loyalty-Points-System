@@ -1,111 +1,324 @@
-import { FC } from 'react';
+import { FC, useEffect, useState, CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
+/* ── colour tokens ── */
+const C = {
+  bg: '#0a0f1e',
+  surface: '#0f1628',
+  white: '#ffffff',
+  slate300: '#cbd5e1',
+  slate400: '#94a3b8',
+  slate500: '#64748b',
+  slate600: '#475569',
+  emerald: '#14f195',
+  emeraldDark: '#0fcf7f',
+  lime: '#a3e635',
+  violet: '#9945ff',
+  border: 'rgba(255,255,255,0.07)',
+  borderHover: 'rgba(255,255,255,0.14)',
+};
+
+/* ── reusable style fragments ── */
+const absOverlay: CSSProperties = {
+  position: 'absolute',
+  pointerEvents: 'none',
+};
+
 const HomePage: FC = () => {
   const { connected, connecting } = useWallet();
-  const displayFont = { fontFamily: '"Fraunces", "Space Grotesk", serif' };
+  const [vis, setVis] = useState(false);
+  useEffect(() => { setVis(true); }, []);
+
+  const fadeIn = (delay = 0): CSSProperties => ({
+    opacity: vis ? 1 : 0,
+    transform: vis ? 'translateY(0)' : 'translateY(28px)',
+    transition: `opacity 0.9s cubic-bezier(.16,1,.3,1) ${delay}s, transform 0.9s cubic-bezier(.16,1,.3,1) ${delay}s`,
+  });
 
   return (
-    <div className="min-h-screen bg-[#0b0f17] text-white flex flex-col">
-      <div className="flex-1">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(20,241,149,0.18),_transparent_60%)]"></div>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(245,158,11,0.18),_transparent_55%)]"></div>
-          <div className="pointer-events-none absolute inset-0 opacity-20 bg-[linear-gradient(90deg,_rgba(255,255,255,0.06)_1px,_transparent_1px),linear-gradient(180deg,_rgba(255,255,255,0.06)_1px,_transparent_1px)] bg-[size:48px_48px]"></div>
+    <div style={{
+      minHeight: '100vh',
+      background: C.bg,
+      color: C.white,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      fontFamily: "'Space Grotesk', 'Inter', system-ui, sans-serif",
+      margin: '-24px',
+      width: 'calc(100% + 48px)',
+    }}>
 
-          <section className="container mx-auto max-w-4xl px-4 py-20 sm:py-24 lg:py-32">
-            <div className="rounded-[28px] border border-white/10 bg-white/5 px-8 py-12 sm:px-12 sm:py-16 backdrop-blur-xl shadow-2xl">
-              {/* Badge */}
-              <div className="flex justify-center mb-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-200">
-                  <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-[11px] font-semibold text-emerald-200">
-                    Solana native
-                  </span>
-                  <span className="text-[11px]">Non-custodial</span>
-                </div>
+      {/* ══════ HERO ══════ */}
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Gradient orbs */}
+        <div style={{ ...absOverlay, top: '-15%', left: '8%', width: 550, height: 550, borderRadius: '50%', background: 'rgba(20,241,149,0.09)', filter: 'blur(120px)' }} />
+        <div style={{ ...absOverlay, top: '5%', right: '4%', width: 480, height: 480, borderRadius: '50%', background: 'rgba(153,69,255,0.08)', filter: 'blur(110px)' }} />
+        <div style={{ ...absOverlay, bottom: '-5%', left: '35%', width: 360, height: 360, borderRadius: '50%', background: 'rgba(245,158,11,0.06)', filter: 'blur(100px)' }} />
+
+        {/* Subtle dot grid */}
+        <div style={{
+          ...absOverlay,
+          inset: 0,
+          opacity: 0.035,
+          backgroundImage:
+            'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+        }} />
+
+        {/* Hero content */}
+        <section style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 24px 20px',
+        }}>
+          <div style={{ maxWidth: 720, width: '100%', textAlign: 'center', ...fadeIn(0) }}>
+
+            {/* Badge */}
+            {/* <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                borderRadius: 100,
+                border: `1px solid rgba(20,241,149,0.25)`,
+                background: 'rgba(20,241,149,0.06)',
+                padding: '8px 20px',
+                fontSize: 11,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase' as const,
+                color: 'rgba(20,241,149,0.85)',
+                fontWeight: 600,
+              }}>
+                <span style={{ position: 'relative', width: 8, height: 8, display: 'inline-flex' }}>
+                  <span style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: C.emerald, opacity: 0.6,
+                    animation: 'homePing 1.5s cubic-bezier(0,0,0.2,1) infinite',
+                  }} />
+                  <span style={{ position: 'relative', width: 8, height: 8, borderRadius: '50%', background: C.emerald }} />
+                </span>
+                Solana powered · Non-custodial
               </div>
+            </div> */}
 
-              {/* Content */}
-              <div className="space-y-6 mb-8 text-center">
-                <h1 style={displayFont} className="text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight">
-                  Loyalty points that travel with you.
-                </h1>
-                <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-                  Earn at any partner, redeem anywhere. Your rewards, your wallet, your control.
-                </p>
-              </div>
+            {/* Headline */}
+            <h1 style={{
+              fontFamily: "'Fraunces', 'Space Grotesk', serif",
+              fontSize: 'clamp(2.8rem, 6vw, 4.5rem)',
+              fontWeight: 800,
+              lineHeight: 1.1,
+              letterSpacing: '-0.02em',
+              marginBottom: 12,
+            }}>
+              <span style={{
+                display: 'block',
+                background: 'linear-gradient(to bottom right, #fff, #94a3b8)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                Rewards That
+              </span>
+              <span style={{
+                display: 'block',
+                background: `linear-gradient(135deg, ${C.emerald}, ${C.lime})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                Travel With You
+              </span>
+            </h1>
 
-              {/* Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center">
-                {!connected ? (
-                  <>
-                    <WalletMultiButton className="!text-base !font-bold !px-10 !py-4 !rounded-xl !bg-emerald-400 !text-[#0b0f17] hover:!bg-emerald-300 transition-all" />
-                    <Link
-                      to="/rewards"
-                      className="rounded-xl border border-white/10 bg-white/5 px-8 py-4 text-center text-sm font-semibold text-white hover:bg-white/10 transition-all"
-                    >
-                      Explore rewards
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      to="/dashboard"
-                      className="group rounded-xl bg-gradient-to-r from-emerald-400 via-lime-300 to-amber-300 px-10 py-4 text-center text-base font-bold text-[#0b0f17] shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
-                    >
-                      <span className="flex items-center justify-center gap-2">
-                        Go to dashboard
-                        <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
-                      </span>
-                    </Link>
-                    <Link to="/marketplace" className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-10 py-4 text-center text-base font-semibold text-emerald-100 hover:bg-emerald-400/20 transition-all">
-                      Browse marketplace
-                    </Link>
-                  </>
-                )}
-              </div>
+            {/* Subheadline */}
+            <p style={{
+              fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+              color: C.slate400,
+              lineHeight: 1.7,
+              maxWidth: 480,
+              margin: '0 auto 16px',
+              fontWeight: 300,
+            }}>
+              Earn loyalty points at any partner. Redeem anywhere.{' '}
+              <span style={{ color: C.slate300 }}>Your wallet, your control.</span>
+            </p>
 
-              {/* Helper text */}
-              {!connected && (
-                <div className="flex items-center justify-center gap-3 text-sm text-slate-400">
-                  {connecting ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent"></div>
-                      <span>Connecting...</span>
-                    </>
-                  ) : (
-                    <span>✓ No signup • ✓ Instant • ✓ Secure</span>
-                  )}
-                </div>
+            {/* CTAs */}
+            <div style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, ...fadeIn(0.15) }}>
+              {!connected ? (
+                <>
+                  <WalletMultiButton
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      height: '48px',
+                      background: `linear-gradient(135deg, ${C.emerald}, ${C.lime})`,
+                      color: C.bg,
+                      fontWeight: 700,
+                      fontSize: 15,
+                      padding: '0 32px',
+                      borderRadius: 14,
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: `0 8px 32px rgba(20,241,149,0.25)`,
+                      transition: 'all 0.25s',
+                    }}
+                  />
+                  <Link
+                    to="/rewards"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      height: '48px',
+                      padding: '0 32px',
+                      borderRadius: 14,
+                      border: `1px solid ${C.borderHover}`,
+                      background: 'rgba(255,255,255,0.04)',
+                      color: C.slate300,
+                      fontWeight: 600,
+                      fontSize: 15,
+                      textDecoration: 'none',
+                      transition: 'all 0.25s',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    Explore rewards
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/dashboard"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      height: '48px',
+                      padding: '0 32px',
+                      borderRadius: 14,
+                      background: `linear-gradient(135deg, ${C.emerald}, ${C.lime})`,
+                      color: C.bg,
+                      fontWeight: 700,
+                      fontSize: 15,
+                      textDecoration: 'none',
+                      boxShadow: `0 8px 32px rgba(20,241,149,0.25)`,
+                      transition: 'all 0.25s',
+                    }}
+                  >
+                    Go to dashboard
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                  <Link
+                    to="/marketplace"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      height: '48px',
+                      padding: '0 32px',
+                      borderRadius: 14,
+                      border: `1px solid ${C.borderHover}`,
+                      background: 'rgba(255,255,255,0.04)',
+                      color: C.slate300,
+                      fontWeight: 600,
+                      fontSize: 15,
+                      textDecoration: 'none',
+                      transition: 'all 0.25s',
+                    }}
+                  >
+                    Browse marketplace
+                  </Link>
+                </>
               )}
             </div>
-          </section>
-        </div>
 
-        {/* Features Section */}
-        <section className="py-20 px-4 bg-gradient-to-b from-transparent via-emerald-500/5 to-transparent">
-          <div className="container mx-auto max-w-4xl">
-            <div className="grid grid-cols-1 gap-6">
-              {[
-                { icon: '🔗', title: 'Universal', desc: 'Use at any merchant in our network' },
-                { icon: '🔒', title: 'Yours', desc: 'Full control of your rewards always' },
-                { icon: '📊', title: 'Transparent', desc: 'Every transaction on-chain' },
-              ].map((item, i) => (
-                <div 
-                  key={i} 
-                  className="group relative overflow-hidden rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/10 via-white/5 to-amber-500/5 p-8 hover:border-emerald-400/60 hover:bg-gradient-to-br hover:from-emerald-500/15 hover:via-white/10 hover:to-amber-500/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10"
-                >
-                  <div className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full bg-emerald-400/20 blur-2xl group-hover:bg-emerald-400/30 transition-all"></div>
-                  <div className="relative text-center space-y-3">
-                    <div className="text-5xl group-hover:scale-110 transition-transform duration-300">{item.icon}</div>
-                    <h3 className="font-semibold text-white text-lg">{item.title}</h3>
-                    <p className="text-slate-300 text-sm leading-relaxed">{item.desc}</p>
+            {/* Trust indicators */}
+            {!connected && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, flexWrap: 'wrap', ...fadeIn(0.3) }}>
+                {connecting ? (
+                  <span style={{ color: C.slate400, fontSize: 14 }}>Connecting…</span>
+                ) : (
+                  ['No signup required', 'Instant setup', '100% on-chain'].map((t) => (
+                    <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: C.slate400 }}>
+                      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke={C.emerald} strokeWidth={2.5} style={{ opacity: 0.7 }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      {t}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ══════ HOW IT WORKS ══════ */}
+        <section style={{ position: 'relative', padding: '16px 24px 24px', ...fadeIn(0.45) }}>
+          <div style={{ maxWidth: 900, margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+              {([
+                {
+                  step: '01',
+                  icon: 'M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3',
+                  title: 'Connect wallet',
+                  desc: 'Link your Solana wallet in seconds. No registration needed.',
+                },
+                {
+                  step: '02',
+                  icon: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+                  title: 'Earn points',
+                  desc: 'Accumulate LoyaltyChain points at participating partners instantly.',
+                },
+                {
+                  step: '03',
+                  icon: 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z',
+                  title: 'Redeem anywhere',
+                  desc: 'Use points for rewards across our entire partner network global.',
+                },
+              ] as const).map(({ step, icon, title, desc }) => (
+                <div key={step} style={{
+                  borderRadius: 20,
+                  border: `1px solid rgba(20,241,149,0.12)`,
+                  background: 'rgba(20,241,149,0.03)',
+                  padding: '16px 18px',
+                  transition: 'all 0.3s',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <span style={{ fontSize: 32, fontWeight: 700, color: 'rgba(20,241,149,0.35)', fontFamily: "'Space Grotesk', monospace" }}>{step}</span>
+                    <div style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 12,
+                      background: 'rgba(20,241,149,0.08)',
+                      border: '1px solid rgba(20,241,149,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke={C.emerald} strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+                      </svg>
+                    </div>
                   </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 4 }}>{title}</h3>
+                  <p style={{ fontSize: 12, color: C.slate500, lineHeight: 1.5 }}>{desc}</p>
                 </div>
               ))}
             </div>
@@ -113,80 +326,51 @@ const HomePage: FC = () => {
         </section>
       </div>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent">
-        <div className="container mx-auto max-w-4xl">
-          <div className="relative overflow-hidden rounded-3xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/15 via-white/5 to-amber-500/10 p-12 shadow-2xl shadow-emerald-500/10">
-            <div className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-emerald-400/30 blur-3xl"></div>
-            <div className="pointer-events-none absolute -right-16 -bottom-16 h-40 w-40 rounded-full bg-amber-400/30 blur-3xl"></div>
-
-            <div className="relative text-center space-y-6">
-              <h2 style={displayFont} className="text-3xl sm:text-4xl font-semibold text-white">
-                Start earning rewards now
-              </h2>
-              <p className="text-slate-300 text-base leading-relaxed">Join thousands earning loyalty points across our network</p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
-                {!connected ? (
-                  <>
-                    <WalletMultiButton className="!text-base !font-bold !px-12 !py-4 !rounded-xl !bg-emerald-400 !text-[#0b0f17] hover:!bg-emerald-300 hover:!shadow-lg hover:!shadow-emerald-500/30 transition-all" />
-                    <Link to="/rewards" className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-10 py-4 text-base font-semibold text-emerald-100 hover:bg-emerald-400/20 hover:border-emerald-400/60 transition-all">
-                      View rewards
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/marketplace" className="rounded-xl bg-gradient-to-r from-emerald-400 via-lime-300 to-amber-300 px-12 py-4 text-base font-bold text-[#0b0f17] shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl">
-                      Browse marketplace
-                    </Link>
-                    <Link to="/dashboard" className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-10 py-4 text-base font-semibold text-emerald-100 hover:bg-emerald-400/20 hover:border-emerald-400/60 transition-all">
-                      View dashboard
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+      {/* ══════ FOOTER ══════ */}
+      <footer style={{
+        borderTop: `1px solid ${C.border}`,
+        padding: '16px 24px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        maxWidth: 900,
+        margin: '0 auto',
+        width: '100%',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 10,
+            background: `linear-gradient(135deg, ${C.emerald}, ${C.lime})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 10, fontWeight: 800, color: C.bg,
+          }}>LC</div>
+          <span style={{ fontSize: 14, fontWeight: 600, color: C.white }}>LoyaltyChain</span>
         </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/5 bg-gradient-to-b from-white/2.5 to-white/0 px-4 py-16 mt-20">
-        <div className="container mx-auto max-w-4xl">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
-            {/* Brand */}
-            <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-amber-400 text-sm font-bold text-[#0b0f17]">
-                LC
-              </div>
-              <div>
-                <p className="font-semibold text-white text-sm">LoyaltyChain</p>
-                <p className="text-xs text-slate-400">Rewards that travel with you</p>
-              </div>
-            </div>
-
-            {/* Links */}
-            <div className="flex flex-wrap items-center gap-6 text-sm">
-              <Link to="/" className="text-slate-400 hover:text-emerald-400 transition-colors font-medium">Home</Link>
-              <Link to="/rewards" className="text-slate-400 hover:text-emerald-400 transition-colors font-medium">Rewards</Link>
-              <a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors font-medium">Docs</a>
-              <a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors font-medium">Support</a>
-            </div>
-
-            {/* Copyright */}
-            <p className="text-xs text-slate-500 text-center md:text-right">
-              © 2024 LoyaltyChain. Powered by Solana.
-            </p>
-          </div>
-          
-          {/* Divider */}
-          <div className="border-t border-white/5 mt-8 pt-8">
-            <p className="text-center text-xs text-slate-600">
-              Fast • Transparent • Secure
-            </p>
-          </div>
+        <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
+          {[
+            { label: 'Home', to: '/' },
+            { label: 'Rewards', to: '/rewards' },
+            { label: 'Marketplace', to: '/marketplace' },
+            { label: 'Docs', to: '#' },
+          ].map(({ label, to }) => (
+            <Link key={label} to={to} style={{ color: C.slate500, textDecoration: 'none', transition: 'color 0.2s' }}>{label}</Link>
+          ))}
         </div>
+
+        <p style={{ fontSize: 12, color: C.slate600 }}>
+          © {new Date().getFullYear()} LoyaltyChain. All rights reserved.
+        </p>
       </footer>
+
+      {/* keyframes for ping animation */}
+      <style>{`
+        @keyframes homePing {
+          75%, 100% { transform: scale(2); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 };
