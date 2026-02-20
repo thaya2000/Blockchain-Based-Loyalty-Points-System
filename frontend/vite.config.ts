@@ -4,6 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  envDir: '..', // load .env from project root instead of frontend/
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

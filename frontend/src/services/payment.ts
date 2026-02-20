@@ -3,10 +3,13 @@ import {
   PublicKey,
   Transaction,
   SystemProgram,
-  LAMPORTS_PER_SOL,
+  TransactionInstruction,
 } from '@solana/web3.js';
-import { AnchorProvider, Program, web3, BN } from '@project-serum/anchor';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
+
+// Token decimals - must match the value passed to initialize_platform (6)
+const TOKEN_DECIMALS = 6;
+const LP_SCALE = BigInt(10 ** TOKEN_DECIMALS); // 1_000_000
 
 // Lazy initialization of PublicKeys to avoid errors on missing env vars
 let PROGRAM_ID: PublicKey | null = null;
@@ -61,12 +64,15 @@ function deriveMerchantRecordPDA(merchantWallet: PublicKey): [PublicKey, number]
   );
 }
 
-function derivePurchaseRecordPDA(customerWallet: PublicKey, productIdHash: Buffer): [PublicKey, number] {
+function derivePurchaseRecordPDA(customerWallet: PublicKey, productIdHash: Buffer, nonce: bigint): [PublicKey, number] {
+  const nonceBuffer = Buffer.alloc(8);
+  nonceBuffer.writeBigUInt64LE(nonce, 0);
   return PublicKey.findProgramAddressSync(
     [
       Buffer.from('purchase'),
       customerWallet.toBuffer(),
       productIdHash,
+      nonceBuffer,
     ],
     getProgramId()
   );
@@ -77,6 +83,14 @@ async function hashProductId(productId: string): Promise<Buffer> {
   const data = encoder.encode(productId);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data as unknown as BufferSource);
   return Buffer.from(hashBuffer);
+}
+
+// Calculate Anchor instruction discriminator
+async function getInstructionDiscriminator(instructionName: string): Promise<Buffer> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(`global:${instructionName}`);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data as unknown as BufferSource);
+  return Buffer.from(hashBuffer).slice(0, 8);
 }
 
 // ============================================
@@ -121,6 +135,7 @@ export interface RedeemPointsParams {
 /**
  * Merchant deposits SOL to the protocol treasury and receives loyalty points
  * at the platform's configured ratio (e.g. 1 SOL = 100 LP)
+ * Calls the deposit_sol instruction on-chain.
  */
 export async function depositSol(params: DepositSolParams): Promise<string> {
   const { connection, wallet, solAmount } = params;
@@ -129,55 +144,47 @@ export async function depositSol(params: DepositSolParams): Promise<string> {
     throw new Error('Wallet not connected');
   }
 
-  try {
-    const programId = getProgramId();
-    const [platformState] = derivePlatformStatePDA();
-    const [tokenMint] = deriveTokenMintPDA();
-    const merchantPubkey = wallet.publicKey;
-    const [merchantRecord] = deriveMerchantRecordPDA(merchantPubkey);
+  const programId = getProgramId();
+  const [platformState] = derivePlatformStatePDA();
+  const [tokenMint] = deriveTokenMintPDA();
+  const merchantPubkey = wallet.publicKey;
+  const [merchantRecord] = deriveMerchantRecordPDA(merchantPubkey);
+  const protocolTreasury = getPlatformAuthority();
+  const { ASSOCIATED_TOKEN_PROGRAM_ID } = await import('@solana/spl-token');
 
-    // Get merchant's token account
-    const merchantTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      merchantPubkey
-    );
+  const merchantTokenAccount = await getAssociatedTokenAddress(tokenMint, merchantPubkey);
 
-    // Get protocol treasury from platform state
-    const protocolTreasury = getPlatformAuthority();
+  const discriminator = await getInstructionDiscriminator('deposit_sol');
+  const argsBuffer = Buffer.alloc(8);
+  argsBuffer.writeBigUInt64LE(BigInt(solAmount), 0);
+  const data = Buffer.concat([discriminator, argsBuffer]);
 
-    // Build transaction
-    const transaction = new Transaction();
+  const instruction = new TransactionInstruction({
+    programId,
+    keys: [
+      { pubkey: merchantPubkey, isSigner: true, isWritable: true },
+      { pubkey: protocolTreasury, isSigner: false, isWritable: true },
+      { pubkey: platformState, isSigner: false, isWritable: true },
+      { pubkey: merchantRecord, isSigner: false, isWritable: true },
+      { pubkey: tokenMint, isSigner: false, isWritable: true },
+      { pubkey: merchantTokenAccount, isSigner: false, isWritable: true },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data,
+  });
 
-    // Check if merchant token account exists, create if not
-    const accountInfo = await connection.getAccountInfo(merchantTokenAccount);
-    if (!accountInfo) {
-      transaction.add(
-        createAssociatedTokenAccountInstruction(
-          merchantPubkey,
-          merchantTokenAccount,
-          merchantPubkey,
-          tokenMint
-        )
-      );
-    }
+  const transaction = new Transaction().add(instruction);
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = merchantPubkey;
 
-    // SOL transfer to treasury + loyalty points minting happens on-chain 
-    // via the deposit_sol instruction
-    // For now, simulated - replace with Anchor IDL client in production
-    const signature = 'deposit_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  const signature = await wallet.sendTransaction(transaction, connection);
+  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
 
-    console.log('Deposit SOL transaction:', {
-      merchant: merchantPubkey.toBase58(),
-      solAmount,
-      solAmountInSOL: solAmount / LAMPORTS_PER_SOL,
-      signature,
-    });
-
-    return signature;
-  } catch (error) {
-    console.error('Error depositing SOL:', error);
-    throw error;
-  }
+  console.log('Deposit SOL confirmed:', { merchant: merchantPubkey.toBase58(), solAmount, signature });
+  return signature;
 }
 
 // ============================================
@@ -216,9 +223,10 @@ export async function purchaseProductWithSOL(params: PurchaseWithSOLParams): Pro
       wallet.publicKey
     );
 
-    // Create product ID hash and derive purchase record PDA
+    // Create product ID hash and derive purchase record PDA with unique nonce
     const productIdHash = await hashProductId(productId);
-    const [purchaseRecord] = derivePurchaseRecordPDA(wallet.publicKey, productIdHash);
+    const nonce = BigInt(Date.now()); // unique per purchase attempt
+    const [purchaseRecord] = derivePurchaseRecordPDA(wallet.publicKey, productIdHash, nonce);
 
     // Get protocol treasury
     const protocolTreasury = getPlatformAuthority();
@@ -239,11 +247,65 @@ export async function purchaseProductWithSOL(params: PurchaseWithSOLParams): Pro
       );
     }
 
-    // For now, return a simulated transaction signature
-    // In production, use the generated Anchor client
-    const signature = 'purchase_sol_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    // Build purchase_product_with_sol instruction
+    // Data layout: [8 discriminator][32 product_id_hash][8 price_sol][8 loyalty_points_reward][8 nonce]
+    const discriminator = await getInstructionDiscriminator('purchase_product_with_sol');
+    const instructionData = Buffer.alloc(8 + 32 + 8 + 8 + 8);
+    let offset = 0;
+    
+    // Instruction discriminator
+    discriminator.copy(instructionData, offset);
+    offset += 8;
+    
+    // product_id_hash: [u8; 32]
+    productIdHash.copy(instructionData, offset);
+    offset += 32;
+    
+    // price_sol: u64 (little-endian)
+    instructionData.writeBigUInt64LE(BigInt(priceSol), offset);
+    offset += 8;
+    
+    // loyalty_points_reward: u64 (little-endian) — scale to raw token units
+    instructionData.writeBigUInt64LE(BigInt(loyaltyPointsReward) * LP_SCALE, offset);
+    offset += 8;
 
-    console.log('Purchase with SOL transaction:', {
+    // nonce: u64 (little-endian)
+    instructionData.writeBigUInt64LE(nonce, offset);
+
+    const instruction = new TransactionInstruction({
+      keys: [
+        { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+        { pubkey: merchantPubkey, isSigner: false, isWritable: true },
+        { pubkey: protocolTreasury, isSigner: false, isWritable: true },
+        { pubkey: platformState, isSigner: false, isWritable: true },
+        { pubkey: merchantRecord, isSigner: false, isWritable: true },
+        { pubkey: purchaseRecord, isSigner: false, isWritable: true },
+        { pubkey: tokenMint, isSigner: false, isWritable: true },
+        { pubkey: customerTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      programId,
+      data: instructionData,
+    });
+
+    transaction.add(instruction);
+
+    // Send and confirm transaction
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = wallet.publicKey;
+
+    const signature = await wallet.sendTransaction(transaction, connection);
+    
+    // Wait for confirmation
+    await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    }, 'confirmed');
+
+    console.log('Purchase with SOL transaction confirmed:', {
       customer: wallet.publicKey.toBase58(),
       merchant: merchantWallet,
       productId,
@@ -265,75 +327,11 @@ export async function purchaseProductWithSOL(params: PurchaseWithSOLParams): Pro
 
 /**
  * Purchase a product by burning loyalty points
- * Calls the purchase_product_with_points instruction on-chain
+ * Calls the purchase_product_with_points instruction on-chain.
+ * Note: this is an alias for redeemLoyaltyPoints — use either.
  */
 export async function purchaseProductWithPoints(params: PurchaseWithPointsParams): Promise<string> {
-  const {
-    connection,
-    wallet,
-    merchantWallet,
-    productId,
-    pointsAmount,
-  } = params;
-
-  if (!wallet.publicKey) {
-    throw new Error('Wallet not connected');
-  }
-
-  try {
-    const programId = getProgramId();
-    const [platformState] = derivePlatformStatePDA();
-    const [tokenMint] = deriveTokenMintPDA();
-
-    const merchantPubkey = new PublicKey(merchantWallet);
-    const [merchantRecord] = deriveMerchantRecordPDA(merchantPubkey);
-
-    // Get customer's token account
-    const customerTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      wallet.publicKey
-    );
-
-    // Create product ID hash and derive purchase record PDA
-    const productIdHash = await hashProductId(productId);
-    const [purchaseRecord] = derivePurchaseRecordPDA(wallet.publicKey, productIdHash);
-
-    // For now, return a simulated transaction signature
-    // In production, use the generated Anchor client:
-    /*
-    const productIdArray = Array.from(productIdHash);
-    const ix = await program.methods
-      .purchaseProductWithPoints(productIdArray, new BN(pointsAmount))
-      .accounts({
-        customer: wallet.publicKey,
-        merchant: merchantPubkey,
-        platformState,
-        merchantRecord,
-        purchaseRecord,
-        tokenMint,
-        customerTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-      })
-      .instruction();
-    transaction.add(ix);
-    */
-
-    const signature = 'purchase_points_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-
-    console.log('Purchase with loyalty points transaction:', {
-      customer: wallet.publicKey.toBase58(),
-      merchant: merchantWallet,
-      productId,
-      pointsAmount,
-      signature,
-    });
-
-    return signature;
-  } catch (error) {
-    console.error('Error purchasing with points:', error);
-    throw error;
-  }
+  return redeemLoyaltyPoints(params);
 }
 
 // ============================================
@@ -342,7 +340,7 @@ export async function purchaseProductWithPoints(params: PurchaseWithPointsParams
 
 /**
  * Redeem loyalty points for a reward at a merchant
- * This calls the redeem_points instruction on-chain
+ * This calls the purchase_product_with_points instruction on-chain
  */
 export async function redeemLoyaltyPoints(params: RedeemPointsParams): Promise<string> {
   const {
@@ -370,15 +368,68 @@ export async function redeemLoyaltyPoints(params: RedeemPointsParams): Promise<s
       wallet.publicKey
     );
 
-    const merchantTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      merchantPubkey
-    );
+    // Create product ID hash and derive purchase record PDA with unique nonce
+    const productIdHash = await hashProductId(productId);
+    const nonce = BigInt(Date.now()); // unique per redemption attempt
+    const [purchaseRecord] = derivePurchaseRecordPDA(wallet.publicKey, productIdHash, nonce);
 
-    // Simulated signature
-    const signature = 'redeem_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    // Build transaction
+    const transaction = new Transaction();
 
-    console.log('Redeem points transaction:', {
+    // Build purchase_product_with_points instruction
+    // Data layout: [8 discriminator][32 product_id_hash][8 points_amount][8 nonce]
+    const discriminator = await getInstructionDiscriminator('purchase_product_with_points');
+    const instructionData = Buffer.alloc(8 + 32 + 8 + 8);
+    let offset = 0;
+    
+    // Instruction discriminator
+    discriminator.copy(instructionData, offset);
+    offset += 8;
+    
+    // product_id_hash: [u8; 32]
+    productIdHash.copy(instructionData, offset);
+    offset += 32;
+    
+    // points_amount: u64 (little-endian) — scale to raw token units
+    instructionData.writeBigUInt64LE(BigInt(pointsAmount) * LP_SCALE, offset);
+    offset += 8;
+
+    // nonce: u64 (little-endian)
+    instructionData.writeBigUInt64LE(nonce, offset);
+
+    const instruction = new TransactionInstruction({
+      keys: [
+        { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+        { pubkey: merchantPubkey, isSigner: false, isWritable: true },
+        { pubkey: platformState, isSigner: false, isWritable: true },
+        { pubkey: merchantRecord, isSigner: false, isWritable: true },
+        { pubkey: purchaseRecord, isSigner: false, isWritable: true },
+        { pubkey: tokenMint, isSigner: false, isWritable: true },
+        { pubkey: customerTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      programId,
+      data: instructionData,
+    });
+
+    transaction.add(instruction);
+
+    // Send and confirm transaction
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = wallet.publicKey;
+
+    const signature = await wallet.sendTransaction(transaction, connection);
+    
+    // Wait for confirmation
+    await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    }, 'confirmed');
+
+    console.log('Redeem points transaction confirmed:', {
       customer: wallet.publicKey.toBase58(),
       merchant: merchantWallet,
       productId,
@@ -398,7 +449,7 @@ export async function redeemLoyaltyPoints(params: RedeemPointsParams): Promise<s
 // ============================================
 
 /**
- * Get customer's loyalty point balance
+ * Get customer's loyalty point balance from their on-chain token account
  */
 export async function getLoyaltyPointBalance(
   connection: Connection,
@@ -406,7 +457,6 @@ export async function getLoyaltyPointBalance(
 ): Promise<number> {
   try {
     const [tokenMint] = deriveTokenMintPDA();
-
     const customerTokenAccount = await getAssociatedTokenAddress(
       tokenMint,
       customerWallet
@@ -417,9 +467,8 @@ export async function getLoyaltyPointBalance(
       return 0;
     }
 
-    // Parse token account data to get balance
-    // This is simplified - actual implementation would use token account layout
-    return 0; // Placeholder
+    const tokenBalance = await connection.getTokenAccountBalance(customerTokenAccount);
+    return Number(tokenBalance.value.amount); // raw amount (unscaled)
   } catch (error) {
     console.error('Error getting loyalty point balance:', error);
     return 0;

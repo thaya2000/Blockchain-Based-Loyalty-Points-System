@@ -6,7 +6,7 @@ use crate::errors::LoyaltyError;
 use crate::state::{MerchantRecord, PlatformState, PurchaseRecord};
 
 #[derive(Accounts)]
-#[instruction(product_id_hash: [u8; 32])]
+#[instruction(product_id_hash: [u8; 32], price_sol: u64, loyalty_points_reward: u64, nonce: u64)]
 pub struct PurchaseProductWithSol<'info> {
     /// The customer making the purchase
     #[account(mut)]
@@ -43,7 +43,7 @@ pub struct PurchaseProductWithSol<'info> {
     )]
     pub merchant_record: Account<'info, MerchantRecord>,
 
-    /// Purchase record PDA
+    /// Purchase record PDA - nonce allows same customer to buy same product multiple times
     #[account(
         init,
         payer = customer,
@@ -51,7 +51,8 @@ pub struct PurchaseProductWithSol<'info> {
         seeds = [
             PurchaseRecord::SEED,
             customer.key().as_ref(),
-            &product_id_hash
+            &product_id_hash,
+            &nonce.to_le_bytes()
         ],
         bump
     )]
@@ -82,6 +83,7 @@ pub fn handler(
     product_id_hash: [u8; 32],
     price_sol: u64,
     loyalty_points_reward: u64,
+    _nonce: u64,
 ) -> Result<()> {
     require!(price_sol > 0, LoyaltyError::InvalidAmount);
     require!(loyalty_points_reward > 0, LoyaltyError::InvalidAmount);
@@ -114,20 +116,23 @@ pub fn handler(
     let total_fee = base_fee.checked_add(variable_fee)
         .ok_or(LoyaltyError::ArithmeticOverflow)?;
 
-    anchor_lang::solana_program::program::invoke(
-        &anchor_lang::solana_program::system_instruction::transfer(
-            &ctx.accounts.merchant.key(),
-            &ctx.accounts.protocol_treasury.key(),
-            total_fee,
-        ),
-        &[
-            ctx.accounts.merchant.to_account_info(),
-            ctx.accounts.protocol_treasury.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
-        ],
-    )?;
+    // Fee is paid by the customer (who is the signer), not the merchant
+    if total_fee > 0 {
+        anchor_lang::solana_program::program::invoke(
+            &anchor_lang::solana_program::system_instruction::transfer(
+                &ctx.accounts.customer.key(),
+                &ctx.accounts.protocol_treasury.key(),
+                total_fee,
+            ),
+            &[
+                ctx.accounts.customer.to_account_info(),
+                ctx.accounts.protocol_treasury.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+    }
 
-    msg!("Merchant paid protocol fee: {} lamports", total_fee);
+    msg!("Customer paid protocol fee: {} lamports", total_fee);
 
     // STEP 3: Mint loyalty points to customer
     let seeds = &[

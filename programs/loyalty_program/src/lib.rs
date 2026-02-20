@@ -52,8 +52,9 @@ pub mod loyalty_program {
         product_id_hash: [u8; 32],
         price_sol: u64,
         loyalty_points_reward: u64,
+        nonce: u64,
     ) -> Result<()> {
-        instructions::purchase_product::handler(ctx, product_id_hash, price_sol, loyalty_points_reward)
+        instructions::purchase_product::handler(ctx, product_id_hash, price_sol, loyalty_points_reward, nonce)
     }
 
     /// Redeem loyalty points at a merchant (consumer)
@@ -78,7 +79,8 @@ pub mod loyalty_program {
         ctx: Context<PurchaseProductWithPoints>,
         product_id_hash: [u8; 32],
         points_amount: u64,
+        nonce: u64,
     ) -> Result<()> {
-        instructions::purchase_with_points::handler(ctx, product_id_hash, points_amount)
+        instructions::purchase_with_points::handler(ctx, product_id_hash, points_amount, nonce)
     }
 }

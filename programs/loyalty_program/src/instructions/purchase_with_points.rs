@@ -5,7 +5,7 @@ use crate::errors::LoyaltyError;
 use crate::state::{MerchantRecord, PlatformState, PurchaseRecord};
 
 #[derive(Accounts)]
-#[instruction(product_id_hash: [u8; 32])]
+#[instruction(product_id_hash: [u8; 32], points_amount: u64, nonce: u64)]
 pub struct PurchaseProductWithPoints<'info> {
     /// The customer making the purchase with loyalty points
     #[account(mut)]
@@ -34,7 +34,7 @@ pub struct PurchaseProductWithPoints<'info> {
     )]
     pub merchant_record: Account<'info, MerchantRecord>,
 
-    /// Purchase record PDA
+    /// Purchase record PDA - nonce allows same customer to redeem same product multiple times
     #[account(
         init,
         payer = customer,
@@ -42,7 +42,8 @@ pub struct PurchaseProductWithPoints<'info> {
         seeds = [
             PurchaseRecord::SEED,
             customer.key().as_ref(),
-            &product_id_hash
+            &product_id_hash,
+            &nonce.to_le_bytes()
         ],
         bump
     )]
@@ -72,6 +73,7 @@ pub fn handler(
     ctx: Context<PurchaseProductWithPoints>,
     product_id_hash: [u8; 32],
     points_amount: u64,
+    _nonce: u64,
 ) -> Result<()> {
     require!(points_amount > 0, LoyaltyError::InvalidAmount);
 

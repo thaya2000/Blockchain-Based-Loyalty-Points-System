@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/index.js';
+import { LoyaltyService } from '../services/loyalty.service.js';
 import type { Order, CreateOrderRequest } from '../../../shared/types.js';
+
+const loyaltyService = new LoyaltyService();
 
 const router = Router();
 
@@ -250,7 +253,8 @@ router.patch('/:id', async (req: Request, res: Response) => {
       values.push(txSignature);
       paramIndex++;
 
-      if (status === 'confirmed' || !status) {
+      // Only auto-set status to 'confirmed' if no explicit status was provided
+      if (!status) {
         updates.push(`status = 'confirmed'`);
       }
     }
@@ -271,7 +275,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Order not found' });
     }
 
-    // If order is confirmed, decrease stock quantity
+    // If order is confirmed, decrease stock quantity and log the transaction
     if (status === 'confirmed') {
       await pool.query(
         `UPDATE products
@@ -282,6 +286,33 @@ router.patch('/:id', async (req: Request, res: Response) => {
          WHERE id = $1`,
         [result.rows[0].product_id]
       );
+
+      // Log to transaction_log so the dashboard stats update
+      try {
+        const merchantResult = await pool.query(
+          'SELECT wallet_address FROM merchants WHERE id = $1',
+          [result.rows[0].merchant_id]
+        );
+        const merchantWallet = merchantResult.rows[0]?.wallet_address || null;
+        const txType = result.rows[0].payment_type === 'loyalty_points' ? 'redeem' : 'mint';
+        const pointsAmount = txType === 'mint'
+          ? parseInt(result.rows[0].loyalty_points_earned) || 0
+          : parseInt(result.rows[0].amount_paid) || 0;
+
+        if (result.rows[0].tx_signature) {
+          await loyaltyService.logTransaction(
+            result.rows[0].tx_signature,
+            txType,
+            result.rows[0].customer_wallet,
+            merchantWallet,
+            pointsAmount,
+            undefined,
+            result.rows[0].order_number
+          );
+        }
+      } catch (logErr) {
+        console.error('Failed to log transaction (non-fatal):', logErr);
+      }
     }
 
     const row = result.rows[0];

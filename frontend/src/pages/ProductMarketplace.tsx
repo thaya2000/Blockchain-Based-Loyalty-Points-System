@@ -37,12 +37,15 @@ export default function ProductMarketplace() {
     }
   }, [role, navigate]);
 
-  // Don't render if merchant
+  useEffect(() => {
+    if (role !== 'merchant') fetchProducts();
+  }, [role]);
+
+  // Don't render if merchant (after all hooks have been called)
   if (role === 'merchant') {
     return null;
   }
 
-  useEffect(() => { fetchProducts(); }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
