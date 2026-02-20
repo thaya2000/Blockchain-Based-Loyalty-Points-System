@@ -1,60 +1,344 @@
-import { FC } from 'react';
+import { FC, useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useUserRole } from '../context/UserRoleContext';
+import MerchantRegisterModal from './MerchantRegisterModal';
+import WalletModal from './WalletModal';
 
 const Navbar: FC = () => {
   const location = useLocation();
+  const { role, loading } = useUserRole();
+  const { connected, connecting, publicKey, disconnect, select, connect } = useWallet();
+  const [showRegister, setShowRegister] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  // clickedConnect covers the brief gap between user clicking and Wallet Standard
+  // setting connecting=true. Cleared when connected or connecting changes.
+  const [clickedConnect, setClickedConnect] = useState(false);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isConnecting = connecting || clickedConnect;
+
+  // Once the wallet actually starts connecting or connects, clear our interim flag
+  useEffect(() => {
+    if (connecting || connected) {
+      setClickedConnect(false);
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+    }
+  }, [connecting, connected]);
+
+  // Called when user picks a wallet from the modal.
+  const handleWalletSelect = useCallback(
+    (walletName: string) => {
+      console.log('[Navbar] handleWalletSelect called', { walletName });
+      setClickedConnect(true);
+      console.log('[Navbar] clickedConnect -> true');
+      setShowWalletModal(false);
+      console.log('[Navbar] wallet modal closed');
+      // @ts-ignore - WalletName is a branded string
+      try {
+        select(walletName);
+        console.log('[Navbar] select() invoked', { walletName });
+      } catch (err) {
+        console.error('[Navbar] select() threw an error', err);
+      }
+
+      // Safety timeout: if wallet never connects in 5s, reset button
+      if (clickTimeoutRef.current) {
+        console.log('[Navbar] clearing existing click timeout');
+        clearTimeout(clickTimeoutRef.current);
+      }
+      clickTimeoutRef.current = setTimeout(() => {
+        console.log('[Navbar] click timeout fired — resetting clickedConnect');
+        setClickedConnect(false);
+      }, 5000);
+
+      setTimeout(() => {
+        console.log('[Navbar] Attempting to connect after 300ms delay');
+      }, 300);
+
+      connect()
+        .then(() => console.log('[Navbar] connect() resolved successfully'))
+        .catch((err) => {
+          console.warn('[Navbar] connect() threw an error, but Wallet Standard may still connect. Waiting for connection...', err);
+        });
+      
+
+      // Wallet Standard auto-connects after select() — connect() may throw
+      // WalletNotSelectedError but the wallet still connects via Wallet Standard.
+      // We keep clickedConnect=true and let the useEffect clear it when connected=true.
+      // console.log('[Navbar] scheduling connect() in 300ms');
+      // setTimeout(() => {
+      //   connect()
+      //     .then(() => console.log('[Navbar] connect() resolved'))
+      //     .catch((err) => {
+      //       console.warn('[Navbar] Wallet connect failed, but Wallet Standard may still connect. Waiting for connection...', err);
+      //     });
+      // }, 300);
+    },
+    [select, connect]
+  );
 
   const isActive = (path: string) => location.pathname === path;
 
+  const shortAddress = publicKey
+    ? `${publicKey.toBase58().slice(0, 4)}…${publicKey.toBase58().slice(-4)}`
+    : '';
+
   return (
-    <nav className="navbar">
-      <Link to="/" className="navbar-brand">
-        <span>💎</span>
-        <span>LoyaltyChain</span>
-      </Link>
+    <>
+      <nav className="navbar">
+        <Link to="/" className="navbar-brand">
+          <span>💎</span>
+          <span>LoyaltyChain</span>
+        </Link>
 
-      <div className="navbar-links">
-        <Link
-          to="/"
-          className={`navbar-link ${isActive('/') ? 'active' : ''}`}
-        >
-          Home
-        </Link>
-        <Link
-          to="/marketplace"
-          className={`navbar-link ${isActive('/marketplace') ? 'active' : ''}`}
-        >
-          🛒 Shop
-        </Link>
-        <Link
-          to="/dashboard"
-          className={`navbar-link ${isActive('/dashboard') ? 'active' : ''}`}
-        >
-          My Points
-        </Link>
-        <Link
-          to="/rewards"
-          className={`navbar-link ${isActive('/rewards') ? 'active' : ''}`}
-        >
-          Rewards
-        </Link>
-        <Link
-          to="/merchant"
-          className={`navbar-link ${isActive('/merchant') ? 'active' : ''}`}
-        >
-          Merchant
-        </Link>
-        <Link
-          to="/admin"
-          className={`navbar-link ${isActive('/admin') ? 'active' : ''}`}
-        >
-          🛡️ Admin
-        </Link>
-      </div>
+        <div className="navbar-links">
+          <Link
+            to="/"
+            className={`navbar-link ${isActive('/') ? 'active' : ''}`}
+          >
+            Home
+          </Link>
 
-      <WalletMultiButton />
-    </nav>
+          <Link
+            to="/marketplace"
+            className={`navbar-link ${isActive('/marketplace') ? 'active' : ''}`}
+          >
+            🛒 Shop
+          </Link>
+
+          {/* Consumer-only links */}
+          {role === 'consumer' && (
+            <>
+              <Link
+                to="/dashboard"
+                className={`navbar-link ${isActive('/dashboard') ? 'active' : ''}`}
+              >
+                My Points
+              </Link>
+              <Link
+                to="/rewards"
+                className={`navbar-link ${isActive('/rewards') ? 'active' : ''}`}
+              >
+                Rewards
+              </Link>
+            </>
+          )}
+
+          {/* Merchant-only link */}
+          {role === 'merchant' && (
+            <Link
+              to="/merchant"
+              className={`navbar-link ${isActive('/merchant') ? 'active' : ''}`}
+            >
+              🏪 Merchant
+            </Link>
+          )}
+
+          {/* Admin-only link */}
+          {role === 'admin' && (
+            <Link
+              to="/admin"
+              className={`navbar-link ${isActive('/admin') ? 'active' : ''}`}
+            >
+              🛡️ Admin
+            </Link>
+          )}
+
+          {/* Become a Merchant — visible only to consumers */}
+          {role === 'consumer' && (
+            <button
+              className="become-merchant-btn"
+              onClick={() => setShowRegister(true)}
+            >
+              <span className="become-merchant-icon">🏪</span>
+              Become a Merchant
+            </button>
+          )}
+
+          {/* Loading indicator */}
+          {loading && (
+            <span className="navbar-link" style={{ opacity: 0.5, cursor: 'default' }}>
+              ⏳
+            </span>
+          )}
+        </div>
+
+        {/* ── Wallet button ── */}
+        {connected && publicKey ? (
+          <div className="nb-wallet-connected">
+            <div className="nb-address">
+              <span className="nb-dot" />
+              {shortAddress}
+            </div>
+            <button className="nb-disconnect" onClick={() => disconnect()}>
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <button
+            className={`nb-connect-btn${isConnecting ? ' nb-connect-btn--loading' : ''}`}
+            onClick={() => !isConnecting && setShowWalletModal(true)}
+            disabled={isConnecting}
+          >
+            <span className="nb-connect-icon">{isConnecting ? '⏳' : '⚡'}</span>
+            {isConnecting ? 'Connecting…' : 'Connect Wallet'}
+          </button>
+        )}
+      </nav>
+
+      {/* Wallet selection modal */}
+      <WalletModal
+        open={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        onSelect={handleWalletSelect}
+      />
+
+      {/* Registration modal */}
+      <MerchantRegisterModal
+        open={showRegister}
+        onClose={() => setShowRegister(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+      />
+
+      <style>{`
+        /* ── Connect Wallet button ── */
+        .nb-connect-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 20px;
+          border-radius: 12px;
+          border: 1px solid rgba(99, 102, 241, 0.4);
+          background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1));
+          color: #a5b4fc;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          white-space: nowrap;
+          font-family: inherit;
+        }
+        .nb-connect-btn:hover {
+          border-color: rgba(99,102,241,0.7);
+          background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.18));
+          color: #c7d2fe;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 24px rgba(99,102,241,0.25);
+        }
+        .nb-connect-btn:active { transform: translateY(0); }
+        .nb-connect-btn--loading {
+          opacity: 0.65;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
+        .nb-connect-icon {
+          font-size: 13px;
+        }
+
+        /* ── Connected state ── */
+        .nb-wallet-connected {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .nb-address {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 14px;
+          border-radius: 10px;
+          border: 1px solid rgba(20, 241, 149, 0.25);
+          background: rgba(20, 241, 149, 0.07);
+          color: #14f195;
+          font-size: 13px;
+          font-weight: 600;
+          font-family: monospace;
+        }
+
+        .nb-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #14f195;
+          box-shadow: 0 0 8px #14f195;
+          flex-shrink: 0;
+          animation: nb-pulse 2s ease infinite;
+        }
+
+        @keyframes nb-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+
+        .nb-disconnect {
+          padding: 8px 14px;
+          border-radius: 10px;
+          border: 1px solid rgba(239, 68, 68, 0.25);
+          background: rgba(239, 68, 68, 0.07);
+          color: #f87171;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: inherit;
+        }
+        .nb-disconnect:hover {
+          border-color: rgba(239,68,68,0.5);
+          background: rgba(239,68,68,0.15);
+          transform: translateY(-1px);
+        }
+
+        /* ── Become Merchant button ── */
+        .become-merchant-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 16px;
+          border-radius: 10px;
+          border: 1px solid rgba(20, 241, 149, 0.3);
+          background: linear-gradient(135deg, rgba(20, 241, 149, 0.08), rgba(163, 230, 53, 0.06));
+          color: #14f195;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          white-space: nowrap;
+          position: relative;
+          overflow: hidden;
+          font-family: inherit;
+        }
+
+        .become-merchant-btn::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: linear-gradient(135deg, rgba(20, 241, 149, 0.12), rgba(163, 230, 53, 0.1));
+          opacity: 0;
+          transition: opacity 0.25s ease;
+        }
+
+        .become-merchant-btn:hover {
+          border-color: rgba(20, 241, 149, 0.5);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 20px rgba(20, 241, 149, 0.15), 0 0 40px rgba(20, 241, 149, 0.05);
+        }
+
+        .become-merchant-btn:hover::before { opacity: 1; }
+        .become-merchant-btn:active { transform: translateY(0); }
+
+        .become-merchant-icon {
+          font-size: 14px;
+          position: relative;
+          z-index: 1;
+        }
+      `}</style>
+    </>
   );
 };
 

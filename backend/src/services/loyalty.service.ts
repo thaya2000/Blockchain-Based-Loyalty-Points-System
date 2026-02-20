@@ -40,13 +40,16 @@ export class LoyaltyService {
     walletAddress: string,
     businessName: string,
     category?: string,
-    logoUrl?: string
+    logoUrl?: string,
+    contactEmail?: string,
+    contactPhone?: string,
+    businessAddress?: string
   ): Promise<Merchant> {
     const result = await pool.query(
-      `INSERT INTO merchants (wallet_address, business_name, category, logo_url)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO merchants (wallet_address, business_name, category, logo_url, contact_email, contact_phone, business_address)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [walletAddress, businessName, category, logoUrl]
+      [walletAddress, businessName, category, logoUrl, contactEmail, contactPhone, businessAddress]
     );
     return this.mapMerchant(result.rows[0]);
   }

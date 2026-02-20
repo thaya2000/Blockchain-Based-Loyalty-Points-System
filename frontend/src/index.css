@@ -377,6 +377,7 @@ main.app-container {
 
 .navbar-links {
   display: flex;
+  align-items: center;
   gap: var(--spacing-lg);
 }
 

@@ -61,7 +61,7 @@ router.get('/:wallet', async (req: Request, res: Response) => {
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { walletAddress, businessName, category, logoUrl } = req.body;
+    const { walletAddress, businessName, category, logoUrl, contactEmail, contactPhone, businessAddress } = req.body;
 
     if (!walletAddress || !businessName) {
       return res.status(400).json({
@@ -83,7 +83,10 @@ router.post('/', async (req: Request, res: Response) => {
       walletAddress,
       businessName,
       category,
-      logoUrl
+      logoUrl,
+      contactEmail,
+      contactPhone,
+      businessAddress
     );
 
     res.status(201).json({ success: true, data: merchant });

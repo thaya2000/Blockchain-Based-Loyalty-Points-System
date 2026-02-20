@@ -39,49 +39,13 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'stats'>('pending');
   const [allMerchants, setAllMerchants] = useState<Merchant[]>([]);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
     if (publicKey) {
-      checkAdminStatus();
-    } else {
-      setCheckingAdmin(false);
-    }
-  }, [publicKey]);
-
-  useEffect(() => {
-    if (isAdmin) {
       fetchPendingMerchants();
       fetchStats();
     }
-  }, [isAdmin]);
-
-  const checkAdminStatus = async () => {
-    if (!publicKey) return;
-
-    setCheckingAdmin(true);
-    try {
-      const response = await fetch(
-        `http://localhost:3001/api/admin/check?wallet=${publicKey.toBase58()}`
-      );
-      const data = await response.json();
-
-      if (data.success) {
-        setIsAdmin(data.isAdmin);
-        if (!data.isAdmin) {
-          alert('Access Denied: You do not have admin privileges');
-        }
-      } else {
-        setIsAdmin(false);
-      }
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      setIsAdmin(false);
-    } finally {
-      setCheckingAdmin(false);
-    }
-  };
+  }, [publicKey]);
 
   const fetchPendingMerchants = async () => {
     if (!publicKey) return;
@@ -123,8 +87,13 @@ export default function AdminDashboard() {
   };
 
   const fetchStats = async () => {
+    if (!publicKey) return;
     try {
-      const response = await fetch('http://localhost:3001/api/admin/stats');
+      const response = await fetch('http://localhost:3001/api/admin/stats', {
+        headers: {
+          'X-Wallet-Address': publicKey.toBase58(),
+        },
+      });
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -214,47 +183,13 @@ export default function AdminDashboard() {
     return labels[category] || category;
   };
 
-  if (!publicKey) {
-    return (
-      <div className="admin-dashboard">
-        <div className="connect-prompt">
-          <h2>🔐 Admin Access Required</h2>
-          <p>Please connect your admin wallet to access the dashboard</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (checkingAdmin) {
-    return (
-      <div className="admin-dashboard">
-        <div className="connect-prompt">
-          <h2>🔍 Verifying Admin Access...</h2>
-          <p>Checking your authorization...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAdmin === false) {
-    return (
-      <div className="admin-dashboard">
-        <div className="connect-prompt" style={{ color: '#ff4444' }}>
-          <h2>🚫 Access Denied</h2>
-          <p>You do not have admin privileges</p>
-          <p style={{ fontSize: '14px', marginTop: '10px', color: '#666' }}>
-            Your wallet: {publicKey.toBase58().slice(0, 8)}...{publicKey.toBase58().slice(-8)}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
         <h1>🛡️ Admin Dashboard</h1>
-        <p className="admin-wallet">Admin: {publicKey.toBase58().slice(0, 8)}...{publicKey.toBase58().slice(-8)}</p>
+        {publicKey && (
+          <p className="admin-wallet">Admin: {publicKey.toBase58().slice(0, 8)}...{publicKey.toBase58().slice(-8)}</p>
+        )}
       </div>
 
       {/* Stats Overview */}

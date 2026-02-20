@@ -1,6 +1,5 @@
 import { FC, useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import ProductManagement from '../components/ProductManagement';
 
 interface MerchantInfo {
@@ -70,16 +69,7 @@ const MerchantDashboard: FC = () => {
   };
 
   if (!connected) {
-    return (
-      <div className="text-center" style={{ padding: '100px 0' }}>
-        <div style={{ fontSize: '64px', marginBottom: '24px' }}>🏪</div>
-        <h2 style={{ marginBottom: '16px' }}>Merchant Portal</h2>
-        <p className="page-subtitle" style={{ marginBottom: '24px' }}>
-          Connect your merchant wallet to issue loyalty points
-        </p>
-        <WalletMultiButton />
-      </div>
-    );
+    return null; /* ProtectedRoute handles this */
   }
 
   return (

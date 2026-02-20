@@ -4,7 +4,7 @@
   "description": "Backend API for Solana-based loyalty points platform",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "nodemon --exec tsx src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "migrate": "tsx src/db/migrate.ts",
@@ -27,6 +27,7 @@
     "@types/node": "^20.12.12",
     "@types/pg": "^8.11.6",
     "@types/uuid": "^9.0.8",
+    "nodemon": "^3.0.2",
     "tsx": "^4.11.0",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"

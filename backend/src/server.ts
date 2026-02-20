@@ -34,6 +34,46 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // ============================================
+// Request Timeout & Error Handling
+// ============================================
+
+// Set request timeout to 30 seconds
+app.use((req: Request, res: Response, next: NextFunction) => {
+  req.setTimeout(30000);
+  res.setTimeout(30000);
+  
+  res.on('timeout', () => {
+    console.warn(`⏱️ Request timeout: ${req.method} ${req.path}`);
+    if (!res.headersSent) {
+      res.status(408).json({
+        success: false,
+        error: 'Request timeout'
+      });
+    }
+  });
+  
+  next();
+});
+
+// Global error handler for uncaught errors
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('❌ Request error:', {
+    method: req.method,
+    path: req.path,
+    error: err.message,
+  });
+
+  if (!res.headersSent) {
+    res.status(500).json({
+      success: false,
+      error: process.env.NODE_ENV === 'production' 
+        ? 'Internal server error' 
+        : err.message,
+    });
+  }
+});
+
+// ============================================
 // Routes
 // ============================================
 
@@ -101,10 +141,10 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ============================================
-// Server Start
+// Server Start & Graceful Shutdown
 // ============================================
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║     Loyalty Platform Backend API                       ║
@@ -119,6 +159,37 @@ app.listen(PORT, () => {
 ║    POST /api/transactions/* - Log transactions         ║
 ╚════════════════════════════════════════════════════════╝
   `);
+});
+
+// Graceful shutdown handler
+function gracefulShutdown(signal: string) {
+  console.log(`\n📢 ${signal} received. Shutting down gracefully...`);
+  
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error('❌ Force shutdown (timeout)');
+    process.exit(1);
+  }, 10000);
+}
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 export default app;

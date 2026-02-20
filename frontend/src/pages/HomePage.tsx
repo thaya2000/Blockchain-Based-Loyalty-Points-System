@@ -1,7 +1,8 @@
 import { FC, useEffect, useState, CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useUserRole } from '../context/UserRoleContext';
 
 /* ── colour tokens ── */
 const C = {
@@ -27,9 +28,41 @@ const absOverlay: CSSProperties = {
 };
 
 const HomePage: FC = () => {
-  const { connected, connecting } = useWallet();
+  const { connected, connecting, connect, select, publicKey } = useWallet();
+  const { setVisible } = useWalletModal();
+  const { role, loading: roleLoading } = useUserRole();
   const [vis, setVis] = useState(false);
+  
   useEffect(() => { setVis(true); }, []);
+
+  // Log connection state changes
+  useEffect(() => {
+    console.log('📊 HomePage connection state:', { 
+      connected, 
+      connecting, 
+      publicKey: publicKey?.toBase58().slice(0, 8) + '...', 
+      role, 
+      roleLoading 
+    });
+  }, [connected, connecting, publicKey, role, roleLoading]);
+
+  // Handle wallet connection with explicit modal
+  const handleConnectWallet = () => {
+    console.log('🔌 Opening wallet modal...');
+    try {
+      setVisible(true);
+    } catch (error) {
+      // Suppress Chrome extension messaging errors
+      const errorMsg = String(error);
+      if (!errorMsg.includes('message channel closed')) {
+        console.error('❌ Wallet connection error:', error);
+      }
+    }
+  };
+
+  // Role-specific dashboard link
+  const dashboardLink = role === 'admin' ? '/admin' : role === 'merchant' ? '/merchant' : '/dashboard';
+  const dashboardLabel = role === 'admin' ? 'Go to Admin Panel' : role === 'merchant' ? 'Go to Merchant Portal' : 'Go to Dashboard';
 
   const fadeIn = (delay = 0): CSSProperties => ({
     opacity: vis ? 1 : 0,
@@ -153,7 +186,10 @@ const HomePage: FC = () => {
             <div style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, ...fadeIn(0.15) }}>
               {!connected ? (
                 <>
-                  <WalletMultiButton
+                  <button
+                    onClick={handleConnectWallet}
+                    disabled={connecting}
+                    className="wallet-button-connect"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -167,11 +203,28 @@ const HomePage: FC = () => {
                       padding: '0 32px',
                       borderRadius: 14,
                       border: 'none',
-                      cursor: 'pointer',
+                      cursor: connecting ? 'not-allowed' : 'pointer',
                       boxShadow: `0 8px 32px rgba(20,241,149,0.25)`,
                       transition: 'all 0.25s',
+                      opacity: connecting ? 0.7 : 1,
                     }}
-                  />
+                  >
+                    {connecting ? (
+                      <>
+                        <div style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          background: C.bg,
+                          opacity: 0.6,
+                          animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
+                        }} />
+                        <span>Connecting...</span>
+                      </>
+                    ) : (
+                      'Connect Wallet'
+                    )}
+                  </button>
                   <Link
                     to="/rewards"
                     style={{
@@ -201,7 +254,7 @@ const HomePage: FC = () => {
               ) : (
                 <>
                   <Link
-                    to="/dashboard"
+                    to={dashboardLink}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -219,7 +272,7 @@ const HomePage: FC = () => {
                       transition: 'all 0.25s',
                     }}
                   >
-                    Go to dashboard
+                    {dashboardLabel}
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
@@ -253,7 +306,17 @@ const HomePage: FC = () => {
             {!connected && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, flexWrap: 'wrap', ...fadeIn(0.3) }}>
                 {connecting ? (
-                  <span style={{ color: C.slate400, fontSize: 14 }}>Connecting…</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.emerald, fontSize: 14, fontWeight: 500 }}>
+                    <div style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      background: C.emerald,
+                      opacity: 0.6,
+                      animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
+                    }} />
+                    <span>Select account in your wallet...</span>
+                  </div>
                 ) : (
                   ['No signup required', 'Instant setup', '100% on-chain'].map((t) => (
                     <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: C.slate400 }}>
@@ -263,6 +326,46 @@ const HomePage: FC = () => {
                       {t}
                     </div>
                   ))
+                )}
+              </div>
+            )}
+
+            {/* Debug: Connection status (visible when connected) */}
+            {connected && publicKey && (
+              <div style={{
+                marginTop: 24,
+                padding: '12px 16px',
+                borderRadius: 12,
+                background: 'rgba(20, 241, 149, 0.08)',
+                border: `1px solid rgba(20, 241, 149, 0.2)`,
+                fontSize: 12,
+                color: C.slate300,
+                textAlign: 'center',
+                ...fadeIn(0.25)
+              }}>
+                {roleLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: C.emerald }}>
+                    <div style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: C.emerald,
+                      opacity: 0.6,
+                      animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
+                    }} />
+                    <span>Determining wallet role...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: 8 }}>
+                      Wallet: {publicKey.toBase58().slice(0, 8)}…{publicKey.toBase58().slice(-4)}
+                    </div>
+                    <div>
+                      Role: <strong style={{ color: role === 'admin' ? '#ff6b6b' : role === 'merchant' ? '#ffd43b' : C.emerald }}>
+                        {role === 'admin' ? '🛡️ Admin' : role === 'merchant' ? '🏪 Merchant' : '👤 Consumer'}
+                      </strong>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -369,6 +472,32 @@ const HomePage: FC = () => {
       <style>{`
         @keyframes homePing {
           75%, 100% { transform: scale(2); opacity: 0; }
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+
+        .wallet-button-connect {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important;
+        }
+
+        .wallet-button-connect:hover:not(:disabled) {
+          transform: translateY(-2px) !important;
+          box-shadow: 0 12px 40px rgba(20,241,149,0.35) !important;
+        }
+
+        .wallet-button-connect:active:not(:disabled) {
+          transform: translateY(0) !important;
+        }
+
+        .wallet-button-connect:disabled {
+          opacity: 0.7 !important;
+          cursor: not-allowed !important;
         }
       `}</style>
     </div>

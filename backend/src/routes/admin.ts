@@ -38,6 +38,88 @@ router.get('/check', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/admin/role
+ * Returns the role of a wallet: 'admin', 'merchant', or 'consumer'
+ * Public endpoint for the frontend to determine which UI to show
+ */
+router.get('/role', async (req: Request, res: Response) => {
+  try {
+    const walletAddress = (req.query.wallet as string)?.trim();
+
+    if (!walletAddress) {
+      console.error('❌ No wallet address provided');
+      return res.status(400).json({
+        success: false,
+        error: 'Wallet address is required',
+      });
+    }
+
+    // Validate wallet address format
+    if (walletAddress.length < 32 || walletAddress.length > 44) {
+      console.warn(`⚠️ Invalid wallet format: ${walletAddress}`);
+      return res.json({
+        success: true,
+        role: 'consumer',
+        walletAddress,
+      });
+    }
+
+    // 1. Check if wallet is an active admin
+    const isAdmin = await checkAdminStatus(walletAddress);
+    if (isAdmin) {
+      console.log(`✅ ADMIN wallet: ${walletAddress}`);
+      return res.json({
+        success: true,
+        role: 'admin',
+        walletAddress,
+      });
+    }
+
+    // 2. Check if wallet is a registered merchant
+    const merchantResult = await pool.query(
+      `SELECT id, wallet_address, business_name, category, status
+       FROM merchants WHERE wallet_address = $1 LIMIT 1`,
+      [walletAddress]
+    );
+
+    if (merchantResult.rows.length > 0) {
+      const m = merchantResult.rows[0];
+      console.log(`🏪 MERCHANT wallet: ${walletAddress}`);
+      return res.json({
+        success: true,
+        role: 'merchant',
+        walletAddress,
+        merchantInfo: {
+          id: m.id,
+          walletAddress: m.wallet_address,
+          businessName: m.business_name,
+          category: m.category,
+          status: m.status,
+        },
+      });
+    }
+
+    // 3. Default: consumer (all wallets can be consumers)
+    console.log(`👤 CONSUMER wallet: ${walletAddress}`);
+    return res.json({
+      success: true,
+      role: 'consumer',
+      walletAddress,
+    });
+  } catch (error) {
+    console.error('❌ Error checking wallet role:', error);
+    // CRITICAL: Always return consumer role as fallback to ensure wallets can connect
+    const walletAddress = req.query.wallet as string;
+    console.log(`🔄 Fallback to CONSUMER for: ${walletAddress}`);
+    return res.json({
+      success: true,
+      role: 'consumer',
+      walletAddress: walletAddress || 'unknown',
+    });
+  }
+});
+
+/**
  * GET /api/admin/merchants/pending
  * Get all pending merchant registrations
  * Protected: Requires admin authorization
@@ -47,7 +129,7 @@ router.get('/merchants/pending', requireAdmin, async (req: Request, res: Respons
     const result = await pool.query(
       `SELECT * FROM merchants
        WHERE status = 'pending'
-       ORDER BY created_at DESC`
+       ORDER BY registered_at DESC`
     );
 
     const merchants: Merchant[] = result.rows.map(row => ({
@@ -60,7 +142,7 @@ router.get('/merchants/pending', requireAdmin, async (req: Request, res: Respons
       category: row.category,
       status: row.status,
       approvedAt: row.approved_at ? new Date(row.approved_at) : undefined,
-      createdAt: new Date(row.created_at),
+      createdAt: new Date(row.registered_at),
       updatedAt: new Date(row.updated_at),
     }));
 
@@ -88,7 +170,7 @@ router.get('/merchants', requireAdmin, async (req: Request, res: Response) => {
       params.push(status);
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY registered_at DESC';
 
     const result = await pool.query(query, params);
 
@@ -102,7 +184,7 @@ router.get('/merchants', requireAdmin, async (req: Request, res: Response) => {
       category: row.category,
       status: row.status,
       approvedAt: row.approved_at ? new Date(row.approved_at) : undefined,
-      createdAt: new Date(row.created_at),
+      createdAt: new Date(row.registered_at),
       updatedAt: new Date(row.updated_at),
     }));
 
@@ -161,7 +243,7 @@ router.post('/merchants/:id/approve', requireAdmin, async (req: Request, res: Re
       category: row.category,
       status: row.status,
       approvedAt: row.approved_at ? new Date(row.approved_at) : undefined,
-      createdAt: new Date(row.created_at),
+      createdAt: new Date(row.registered_at),
       updatedAt: new Date(row.updated_at),
     };
 
@@ -224,7 +306,7 @@ router.post('/merchants/:id/reject', requireAdmin, async (req: Request, res: Res
       category: row.category,
       status: row.status,
       approvedAt: row.approved_at ? new Date(row.approved_at) : undefined,
-      createdAt: new Date(row.created_at),
+      createdAt: new Date(row.registered_at),
       updatedAt: new Date(row.updated_at),
     };
 

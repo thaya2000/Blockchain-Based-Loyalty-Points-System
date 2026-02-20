@@ -34,19 +34,9 @@ CREATE TRIGGER trigger_update_admins_updated_at
 
 -- Insert default admin (replace with your actual admin wallet address)
 -- This is a placeholder - you should update this with your actual wallet address
-INSERT INTO
-    admins (
-        wallet_address,
-        name,
-        email,
-        role
-    )
-VALUES (
-        'REPLACE_WITH_YOUR_WALLET_ADDRESS',
-        'Platform Admin',
-        'admin@loyalty.com',
-        'super_admin'
-    )
-ON CONFLICT (wallet_address) DO NOTHING;
+-- COMMENTED OUT: Use the manage-admins.sh script instead to add admins
+-- INSERT INTO admins (wallet_address, name, email, role)
+-- VALUES ('REPLACE_WITH_YOUR_WALLET_ADDRESS', 'Platform Admin', 'admin@loyalty.com', 'super_admin')
+-- ON CONFLICT (wallet_address) DO NOTHING;
 
--- Note: After running this migration, update the wallet_address above with your actual admin wallet
+-- Note: After running this migration, use the manage-admins.sh script to add your actual admin wallet
