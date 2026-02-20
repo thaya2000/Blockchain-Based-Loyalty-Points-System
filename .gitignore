@@ -11,6 +11,11 @@ dist/
 build/
 target/
 
+# Hardhat / Ethereum
+artifacts/
+cache/
+typechain-types/
+
 # Solana / Anchor
 test-ledger/
 .anchor/
