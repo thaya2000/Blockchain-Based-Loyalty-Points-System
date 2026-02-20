@@ -66,6 +66,9 @@ export interface Merchant {
   businessName: string;
   category?: string;
   logoUrl?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  businessAddress?: string;
   isActive: boolean;
   onChainAuthorized?: boolean;
 }

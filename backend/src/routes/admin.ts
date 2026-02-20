@@ -84,19 +84,38 @@ router.get('/role', async (req: Request, res: Response) => {
 
     if (merchantResult.rows.length > 0) {
       const m = merchantResult.rows[0];
-      console.log(`🏪 MERCHANT wallet: ${walletAddress}`);
-      return res.json({
-        success: true,
-        role: 'merchant',
-        walletAddress,
-        merchantInfo: {
-          id: m.id,
-          walletAddress: m.wallet_address,
-          businessName: m.business_name,
-          category: m.category,
-          status: m.status,
-        },
-      });
+      
+      // Only grant merchant role if status is 'approved'
+      if (m.status === 'approved') {
+        console.log(`🏪 MERCHANT wallet (approved): ${walletAddress}`);
+        return res.json({
+          success: true,
+          role: 'merchant',
+          walletAddress,
+          merchantInfo: {
+            id: m.id,
+            walletAddress: m.wallet_address,
+            businessName: m.business_name,
+            category: m.category,
+            status: m.status,
+          },
+        });
+      } else {
+        // Merchant exists but not approved yet (pending/rejected)
+        console.log(`👤 CONSUMER wallet (merchant status: ${m.status}): ${walletAddress}`);
+        return res.json({
+          success: true,
+          role: 'consumer',
+          walletAddress,
+          merchantInfo: {
+            id: m.id,
+            walletAddress: m.wallet_address,
+            businessName: m.business_name,
+            category: m.category,
+            status: m.status,
+          },
+        });
+      }
     }
 
     // 3. Default: consumer (all wallets can be consumers)

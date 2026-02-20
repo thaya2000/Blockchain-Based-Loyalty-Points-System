@@ -1,5 +1,7 @@
 import { FC, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useUserRole } from '../context/UserRoleContext';
 import ProductManagement from '../components/ProductManagement';
 
 interface MerchantInfo {
@@ -14,12 +16,26 @@ interface MerchantInfo {
 
 const MerchantDashboard: FC = () => {
   const { publicKey, connected } = useWallet();
+  const { role } = useUserRole();
+  const navigate = useNavigate();
   const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [issueAmount, setIssueAmount] = useState('');
   const [consumerWallet, setConsumerWallet] = useState('');
   const [purchaseRef, setPurchaseRef] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Redirect if not a merchant
+  useEffect(() => {
+    if (role && role !== 'merchant') {
+      navigate('/', { replace: true });
+    }
+  }, [role, navigate]);
+
+  // Return null while checking role or if not merchant
+  if (!role || role !== 'merchant') {
+    return null;
+  }
 
   useEffect(() => {
     const fetchMerchantInfo = async () => {

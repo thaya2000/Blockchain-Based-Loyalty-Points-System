@@ -330,45 +330,7 @@ const HomePage: FC = () => {
               </div>
             )}
 
-            {/* Debug: Connection status (visible when connected) */}
-            {connected && publicKey && (
-              <div style={{
-                marginTop: 24,
-                padding: '12px 16px',
-                borderRadius: 12,
-                background: 'rgba(20, 241, 149, 0.08)',
-                border: `1px solid rgba(20, 241, 149, 0.2)`,
-                fontSize: 12,
-                color: C.slate300,
-                textAlign: 'center',
-                ...fadeIn(0.25)
-              }}>
-                {roleLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: C.emerald }}>
-                    <div style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: C.emerald,
-                      opacity: 0.6,
-                      animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
-                    }} />
-                    <span>Determining wallet role...</span>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ marginBottom: 8 }}>
-                      Wallet: {publicKey.toBase58().slice(0, 8)}…{publicKey.toBase58().slice(-4)}
-                    </div>
-                    <div>
-                      Role: <strong style={{ color: role === 'admin' ? '#ff6b6b' : role === 'merchant' ? '#ffd43b' : C.emerald }}>
-                        {role === 'admin' ? '🛡️ Admin' : role === 'merchant' ? '🏪 Merchant' : '👤 Consumer'}
-                      </strong>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+
           </div>
         </section>
 

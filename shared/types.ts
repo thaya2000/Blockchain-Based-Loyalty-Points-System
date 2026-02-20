@@ -16,6 +16,9 @@ export interface Merchant {
   businessName: string;
   category?: string;
   logoUrl?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  businessAddress?: string;
   status: 'pending' | 'approved' | 'rejected';
   isActive: boolean;
   registeredAt: Date;

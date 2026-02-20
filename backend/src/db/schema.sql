@@ -30,6 +30,9 @@ CREATE TABLE merchants (
     description TEXT,
     logo_url TEXT,
     website_url TEXT,
+    contact_email VARCHAR(255),
+    contact_phone VARCHAR(20),
+    business_address VARCHAR(500),
     status VARCHAR(20) DEFAULT 'pending' CHECK (
         status IN (
             'pending',

@@ -1,5 +1,5 @@
 import { FC, useState, useCallback, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useUserRole } from '../context/UserRoleContext';
 import MerchantRegisterModal from './MerchantRegisterModal';
@@ -7,7 +7,8 @@ import WalletModal from './WalletModal';
 
 const Navbar: FC = () => {
   const location = useLocation();
-  const { role, loading } = useUserRole();
+  const navigate = useNavigate();
+  const { role, loading, merchantInfo } = useUserRole();
   const { connected, connecting, publicKey, disconnect, select } = useWallet();
   const [showRegister, setShowRegister] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -113,7 +114,7 @@ const Navbar: FC = () => {
           )}
 
           {/* Become a Merchant — visible only to consumers */}
-          {role === 'consumer' && (
+          {role === 'consumer' && !merchantInfo && (
             <button
               className="become-merchant-btn"
               onClick={() => setShowRegister(true)}
@@ -121,6 +122,20 @@ const Navbar: FC = () => {
               <span className="become-merchant-icon">🏪</span>
               Become a Merchant
             </button>
+          )}
+
+          {/* Show status if merchant application exists but not approved */}
+          {role === 'consumer' && merchantInfo && (
+            <div className="merchant-status-badge">
+              <span className="status-icon">
+                {merchantInfo.status === 'pending' ? '⏳' : merchantInfo.status === 'rejected' ? '❌' : '📋'}
+              </span>
+              <span className="status-text">
+                {merchantInfo.status === 'pending' ? 'Application Pending' : 
+                 merchantInfo.status === 'rejected' ? 'Application Rejected' : 
+                 `Application ${merchantInfo.status}`}
+              </span>
+            </div>
           )}
 
           {/* Loading indicator */}
@@ -138,7 +153,10 @@ const Navbar: FC = () => {
               <span className="nb-dot" />
               {shortAddress}
             </div>
-            <button className="nb-disconnect" onClick={() => disconnect()}>
+            <button className="nb-disconnect" onClick={() => {
+              disconnect();
+              navigate('/');
+            }}>
               Disconnect
             </button>
           </div>
@@ -303,6 +321,30 @@ const Navbar: FC = () => {
           font-size: 14px;
           position: relative;
           z-index: 1;
+        }
+
+        /* ── Merchant Status Badge ── */
+        .merchant-status-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 16px;
+          border-radius: 10px;
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(251, 191, 36, 0.06));
+          color: #fbbf24;
+          font-size: 13px;
+          font-weight: 600;
+          white-space: nowrap;
+          font-family: inherit;
+        }
+
+        .merchant-status-badge .status-icon {
+          font-size: 14px;
+        }
+
+        .merchant-status-badge .status-text {
+          font-size: 13px;
         }
       `}</style>
     </>

@@ -98,6 +98,18 @@ export class LoyaltyService {
       fields.push(`logo_url = $${paramIndex++}`);
       values.push(updates.logoUrl);
     }
+    if (updates.contactEmail !== undefined) {
+      fields.push(`contact_email = $${paramIndex++}`);
+      values.push(updates.contactEmail);
+    }
+    if (updates.contactPhone !== undefined) {
+      fields.push(`contact_phone = $${paramIndex++}`);
+      values.push(updates.contactPhone);
+    }
+    if (updates.businessAddress !== undefined) {
+      fields.push(`business_address = $${paramIndex++}`);
+      values.push(updates.businessAddress);
+    }
     if (updates.isActive !== undefined) {
       fields.push(`is_active = $${paramIndex++}`);
       values.push(updates.isActive);
@@ -265,8 +277,13 @@ export class LoyaltyService {
       businessName: row.business_name as string,
       category: row.category as string | undefined,
       logoUrl: row.logo_url as string | undefined,
+      contactEmail: row.contact_email as string | undefined,
+      contactPhone: row.contact_phone as string | undefined,
+      businessAddress: row.business_address as string | undefined,
+      status: row.status as 'pending' | 'approved' | 'rejected',
       isActive: row.is_active as boolean,
       registeredAt: new Date(row.registered_at as string),
+      approvedAt: row.approved_at ? new Date(row.approved_at as string) : undefined,
     };
   }
 
