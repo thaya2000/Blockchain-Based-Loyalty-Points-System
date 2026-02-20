@@ -68,29 +68,24 @@ const Navbar: FC = () => {
             Home
           </Link>
 
-          <Link
-            to="/marketplace"
-            className={`navbar-link ${isActive('/marketplace') ? 'active' : ''}`}
-          >
-            🛒 Shop
-          </Link>
+          {/* Shop - visible to consumers and admins only, not merchants */}
+          {role !== 'merchant' && (
+            <Link
+              to="/marketplace"
+              className={`navbar-link ${isActive('/marketplace') ? 'active' : ''}`}
+            >
+              🛒 Shop
+            </Link>
+          )}
 
           {/* Consumer-only links */}
           {role === 'consumer' && (
-            <>
-              <Link
-                to="/dashboard"
-                className={`navbar-link ${isActive('/dashboard') ? 'active' : ''}`}
-              >
-                My Points
-              </Link>
-              <Link
-                to="/rewards"
-                className={`navbar-link ${isActive('/rewards') ? 'active' : ''}`}
-              >
-                Rewards
-              </Link>
-            </>
+            <Link
+              to="/dashboard"
+              className={`navbar-link ${isActive('/dashboard') ? 'active' : ''}`}
+            >
+              My Points
+            </Link>
           )}
 
           {/* Merchant-only link */}

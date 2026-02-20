@@ -37,6 +37,10 @@ pub struct PlatformState {
     /// Total fees collected
     pub total_fees_collected: u64,
     
+    /// SOL to loyalty points conversion ratio
+    /// e.g. 100 means 1 SOL = 100 loyalty points (before decimal adjustment)
+    pub sol_to_points_ratio: u64,
+    
     /// Bump seed for PDA
     pub bump: u8,
 }

@@ -311,7 +311,7 @@ export default function ProductManagement({ merchantId }: Props) {
                 min="0"
                 placeholder="10"
               />
-              <small>Points earned when purchased with SOL</small>
+              <small>Points customers earn when purchasing (recommended: 1 SOL = 100 LP)</small>
             </div>
 
             <div className="form-group">
@@ -400,37 +400,45 @@ export default function ProductManagement({ merchantId }: Props) {
       </div>
 
       <style>{`
+        * { box-sizing: border-box; }
+
         .product-management {
-          margin-top: 2rem;
+          margin-top: 0;
         }
 
         .section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
         }
 
         .section-header h2 {
           margin: 0;
+          color: #fff;
+          font-size: 1.1rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .btn-primary {
-          background: #14f195;
-          color: black;
-          padding: 0.75rem 1.5rem;
+          background: linear-gradient(135deg, #8b5cf6, #6366f1);
+          color: #fff;
+          padding: 10px 22px;
           border: none;
-          border-radius: 8px;
-          font-size: 1rem;
+          border-radius: 10px;
+          font-size: 0.9rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
+          box-shadow: 0 4px 14px rgba(139,92,246,0.35);
         }
 
         .btn-primary:hover {
-          background: #0fd980;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(20, 241, 149, 0.3);
+          box-shadow: 0 6px 20px rgba(139,92,246,0.5);
         }
 
         .btn-primary:disabled {
@@ -440,105 +448,125 @@ export default function ProductManagement({ merchantId }: Props) {
         }
 
         .btn-secondary {
-          background: #f0f0f0;
-          color: #333;
-          padding: 0.75rem 1.5rem;
-          border: none;
-          border-radius: 8px;
-          font-size: 1rem;
+          background: rgba(255,255,255,0.08);
+          color: #cbd5e1;
+          padding: 10px 22px;
+          border: 1.5px solid rgba(255,255,255,0.12);
+          border-radius: 10px;
+          font-size: 0.9rem;
+          font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
         }
 
         .btn-secondary:hover {
-          background: #e0e0e0;
+          background: rgba(255,255,255,0.13);
         }
 
         .product-form {
-          background: white;
-          padding: 2rem;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          margin-bottom: 2rem;
+          background: rgba(15,12,41,0.85);
+          border: 1.5px solid rgba(139,92,246,0.25);
+          padding: 24px;
+          border-radius: 14px;
+          margin-bottom: 24px;
+          backdrop-filter: blur(10px);
         }
 
         .product-form h3 {
-          margin: 0 0 1.5rem 0;
+          margin: 0 0 20px 0;
+          color: #e2e8f0;
+          font-size: 1rem;
+          font-weight: 700;
         }
 
         .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-          margin-bottom: 1rem;
+          gap: 16px;
+          margin-bottom: 16px;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
+          margin-bottom: 16px;
         }
 
         .form-group label {
           font-weight: 600;
-          margin-bottom: 0.5rem;
-          color: #333;
+          margin-bottom: 7px;
+          color: #94a3b8;
+          font-size: 0.82rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
 
         .form-group input,
         .form-group textarea {
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          font-size: 1rem;
+          padding: 12px 14px;
+          border: 1.5px solid rgba(139,92,246,0.3);
+          border-radius: 10px;
+          font-size: 0.95rem;
+          background: rgba(15,12,41,0.9);
+          color: #f1f5f9;
+          outline: none;
           transition: border-color 0.2s;
+          font-family: inherit;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+          color: #475569;
         }
 
         .form-group input:focus,
         .form-group textarea:focus {
-          outline: none;
-          border-color: #14f195;
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
         }
 
         .form-group small {
-          margin-top: 0.25rem;
-          color: #666;
-          font-size: 0.85rem;
+          margin-top: 5px;
+          color: #64748b;
+          font-size: 0.78rem;
         }
 
         .form-actions {
           display: flex;
-          gap: 1rem;
-          margin-top: 1.5rem;
+          gap: 12px;
+          margin-top: 20px;
         }
 
         .products-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-          gap: 1.5rem;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 16px;
         }
 
         .product-card {
-          background: white;
-          border-radius: 12px;
+          background: rgba(255,255,255,0.04);
+          border: 1.5px solid rgba(255,255,255,0.09);
+          border-radius: 14px;
           overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          transition: transform 0.2s, box-shadow 0.2s;
+          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
         }
 
         .product-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+          box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+          border-color: rgba(139,92,246,0.35);
         }
 
         .product-card.unavailable {
-          opacity: 0.7;
+          opacity: 0.6;
         }
 
         .product-image {
           position: relative;
           width: 100%;
-          height: 200px;
+          height: 180px;
           overflow: hidden;
+          background: rgba(15,12,41,0.5);
         }
 
         .product-image img {
@@ -551,37 +579,42 @@ export default function ProductManagement({ merchantId }: Props) {
           position: absolute;
           top: 10px;
           right: 10px;
-          background: rgba(255, 0, 0, 0.9);
-          color: white;
-          padding: 0.5rem 1rem;
+          background: rgba(239,68,68,0.9);
+          color: #fff;
+          padding: 4px 12px;
           border-radius: 20px;
-          font-size: 0.85rem;
-          font-weight: 600;
+          font-size: 0.78rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
         }
 
         .product-details {
-          padding: 1.5rem;
+          padding: 16px;
         }
 
         .product-details h3 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.3rem;
+          margin: 0 0 6px 0;
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: #e2e8f0;
         }
 
         .product-description {
-          color: #666;
-          margin: 0 0 1rem 0;
+          color: #94a3b8;
+          margin: 0 0 12px 0;
           line-height: 1.5;
+          font-size: 0.87rem;
         }
 
         .product-pricing {
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
-          margin-bottom: 1rem;
-          padding: 1rem;
-          background: #f8f9fa;
-          border-radius: 8px;
+          gap: 6px;
+          margin-bottom: 12px;
+          padding: 12px;
+          background: rgba(139,92,246,0.08);
+          border: 1px solid rgba(139,92,246,0.2);
+          border-radius: 10px;
         }
 
         .price-tag, .reward-tag {
@@ -591,107 +624,117 @@ export default function ProductManagement({ merchantId }: Props) {
         }
 
         .price-label, .reward-label {
-          font-size: 0.9rem;
-          color: #666;
+          font-size: 0.82rem;
+          color: #64748b;
         }
 
         .price-value {
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: #14f195;
+          font-size: 1rem;
+          font-weight: 700;
+          color: #a78bfa;
         }
 
         .reward-value {
-          font-size: 0.95rem;
-          font-weight: 600;
-          color: #ff6b6b;
+          font-size: 0.9rem;
+          font-weight: 700;
+          color: #34d399;
         }
 
         .stock-info {
-          padding: 0.5rem;
-          background: #fff3cd;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          margin-bottom: 1rem;
+          padding: 6px 10px;
+          background: rgba(245,158,11,0.1);
+          border: 1px solid rgba(245,158,11,0.25);
+          border-radius: 8px;
+          font-size: 0.82rem;
+          color: #fcd34d;
+          margin-bottom: 12px;
           text-align: center;
+          font-weight: 600;
         }
 
         .product-actions {
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
-          gap: 0.5rem;
+          gap: 6px;
+          margin-top: 4px;
         }
 
         .product-actions button {
-          padding: 0.5rem;
+          padding: 7px 6px;
           border: none;
-          border-radius: 6px;
-          font-size: 0.9rem;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
         }
 
         .btn-edit {
-          background: #2196f3;
-          color: white;
+          background: rgba(59,130,246,0.2);
+          color: #93c5fd;
+          border: 1px solid rgba(59,130,246,0.3) !important;
         }
 
         .btn-edit:hover {
-          background: #1976d2;
-          transform: translateY(-2px);
+          background: rgba(59,130,246,0.35);
+          transform: translateY(-1px);
         }
 
         .btn-toggle {
-          color: white;
+          border: 1px solid transparent !important;
         }
 
         .btn-enable {
-          background: #4caf50;
+          background: rgba(16,185,129,0.2);
+          color: #6ee7b7;
+          border-color: rgba(16,185,129,0.3) !important;
         }
 
         .btn-enable:hover {
-          background: #45a049;
-          transform: translateY(-2px);
+          background: rgba(16,185,129,0.35);
+          transform: translateY(-1px);
         }
 
         .btn-disable {
-          background: #ff9800;
+          background: rgba(245,158,11,0.2);
+          color: #fcd34d;
+          border-color: rgba(245,158,11,0.3) !important;
         }
 
         .btn-disable:hover {
-          background: #f57c00;
-          transform: translateY(-2px);
+          background: rgba(245,158,11,0.35);
+          transform: translateY(-1px);
         }
 
         .btn-delete {
-          background: #f44336;
-          color: white;
+          background: rgba(239,68,68,0.2);
+          color: #fca5a5;
+          border: 1px solid rgba(239,68,68,0.3) !important;
         }
 
         .btn-delete:hover {
-          background: #d32f2f;
-          transform: translateY(-2px);
+          background: rgba(239,68,68,0.35);
+          transform: translateY(-1px);
         }
 
         .empty-state {
           grid-column: 1 / -1;
           text-align: center;
-          padding: 3rem;
-          background: #f8f9fa;
-          border-radius: 12px;
-          color: #666;
-          font-size: 1.1rem;
+          padding: 40px 20px;
+          background: rgba(255,255,255,0.02);
+          border: 1px dashed rgba(255,255,255,0.08);
+          border-radius: 14px;
+          color: #475569;
+          font-size: 1rem;
         }
 
         @media (max-width: 768px) {
           .form-row {
             grid-template-columns: 1fr;
           }
-
           .products-grid {
             grid-template-columns: 1fr;
           }
-
           .product-actions {
             grid-template-columns: 1fr;
           }

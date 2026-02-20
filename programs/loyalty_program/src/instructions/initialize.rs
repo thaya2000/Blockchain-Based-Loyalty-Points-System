@@ -4,6 +4,7 @@ use anchor_spl::token::{Mint, Token};
 use crate::errors::LoyaltyError;
 use crate::state::PlatformState;
 
+
 #[derive(Accounts)]
 pub struct InitializePlatform<'info> {
     /// The admin who will control the platform
@@ -47,10 +48,15 @@ pub fn handler(
     max_supply: u64,
     base_mint_fee: u64,
     fee_rate_per_thousand: u64,
+    sol_to_points_ratio: u64,
 ) -> Result<()> {
     require!(
         token_decimals <= 9,
         LoyaltyError::InvalidDecimals
+    );
+    require!(
+        sol_to_points_ratio > 0,
+        LoyaltyError::InvalidRatio
     );
 
     let platform_state = &mut ctx.accounts.platform_state;
@@ -66,6 +72,7 @@ pub fn handler(
     platform_state.base_mint_fee = base_mint_fee;
     platform_state.fee_rate_per_thousand = fee_rate_per_thousand;
     platform_state.total_fees_collected = 0;
+    platform_state.sol_to_points_ratio = sol_to_points_ratio;
     platform_state.bump = ctx.bumps.platform_state;
 
     msg!(
@@ -77,6 +84,7 @@ pub fn handler(
     msg!("Max supply: {}, Decimals: {}", max_supply, token_decimals);
     msg!("Base mint fee: {} lamports", base_mint_fee);
     msg!("Fee rate: {} lamports per 1000 points", fee_rate_per_thousand);
+    msg!("SOL to points ratio: {} points per SOL", sol_to_points_ratio);
 
     emit!(PlatformInitialized {
         admin: ctx.accounts.admin.key(),
@@ -86,6 +94,7 @@ pub fn handler(
         token_decimals,
         base_mint_fee,
         fee_rate_per_thousand,
+        sol_to_points_ratio,
     });
 
     Ok(())
@@ -100,4 +109,5 @@ pub struct PlatformInitialized {
     pub token_decimals: u8,
     pub base_mint_fee: u64,
     pub fee_rate_per_thousand: u64,
+    pub sol_to_points_ratio: u64,
 }

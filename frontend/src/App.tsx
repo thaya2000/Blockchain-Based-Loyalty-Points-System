@@ -16,7 +16,6 @@ import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ConsumerDashboard from './pages/ConsumerDashboard';
 import MerchantDashboard from './pages/MerchantDashboard';
-import RewardsPage from './pages/RewardsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ProductMarketplace from './pages/ProductMarketplace';
 
@@ -81,14 +80,6 @@ const AppRoutes: FC = () => {
             element={
               <ProtectedRoute allowedRoles={['consumer']}>
                 <ConsumerDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/rewards"
-            element={
-              <ProtectedRoute allowedRoles={['consumer']}>
-                <RewardsPage />
               </ProtectedRoute>
             }
           />

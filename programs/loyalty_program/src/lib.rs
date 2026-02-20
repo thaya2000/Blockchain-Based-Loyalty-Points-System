@@ -6,7 +6,7 @@ pub mod state;
 
 use instructions::*;
 
-declare_id!("DdG9NoqiKjAmoiGoKprBi12XXhLAJbjfqyNXYQXhELpk");
+declare_id!("9RkPYyU3tB5X9g2TkBPiZHUrVNRZjwjZ3Eu8LZhK4LXj");
 
 #[program]
 pub mod loyalty_program {
@@ -19,8 +19,9 @@ pub mod loyalty_program {
         max_supply: u64,
         base_mint_fee: u64,
         fee_rate_per_thousand: u64,
+        sol_to_points_ratio: u64,
     ) -> Result<()> {
-        instructions::initialize::handler(ctx, token_decimals, max_supply, base_mint_fee, fee_rate_per_thousand)
+        instructions::initialize::handler(ctx, token_decimals, max_supply, base_mint_fee, fee_rate_per_thousand, sol_to_points_ratio)
     }
 
     /// Register a new merchant (admin only)
@@ -62,5 +63,22 @@ pub mod loyalty_program {
         reward_id: String,
     ) -> Result<()> {
         instructions::redeem_points::handler(ctx, amount, reward_id)
+    }
+
+    /// Merchant deposits SOL to receive loyalty points
+    pub fn deposit_sol(
+        ctx: Context<DepositSol>,
+        sol_amount: u64,
+    ) -> Result<()> {
+        instructions::deposit_sol::handler(ctx, sol_amount)
+    }
+
+    /// Purchase product with loyalty points (burns points)
+    pub fn purchase_product_with_points(
+        ctx: Context<PurchaseProductWithPoints>,
+        product_id_hash: [u8; 32],
+        points_amount: u64,
+    ) -> Result<()> {
+        instructions::purchase_with_points::handler(ctx, product_id_hash, points_amount)
     }
 }

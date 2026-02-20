@@ -225,31 +225,6 @@ const HomePage: FC = () => {
                       'Connect Wallet'
                     )}
                   </button>
-                  <Link
-                    to="/rewards"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      height: '48px',
-                      padding: '0 32px',
-                      borderRadius: 14,
-                      border: `1px solid ${C.borderHover}`,
-                      background: 'rgba(255,255,255,0.04)',
-                      color: C.slate300,
-                      fontWeight: 600,
-                      fontSize: 15,
-                      textDecoration: 'none',
-                      transition: 'all 0.25s',
-                      backdropFilter: 'blur(8px)',
-                    }}
-                  >
-                    Explore rewards
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
                 </>
               ) : (
                 <>
@@ -417,7 +392,6 @@ const HomePage: FC = () => {
         <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
           {[
             { label: 'Home', to: '/' },
-            { label: 'Rewards', to: '/rewards' },
             { label: 'Marketplace', to: '/marketplace' },
             { label: 'Docs', to: '#' },
           ].map(({ label, to }) => (

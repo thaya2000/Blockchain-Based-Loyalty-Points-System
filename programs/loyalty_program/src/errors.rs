@@ -49,4 +49,16 @@ pub enum LoyaltyError {
     
     #[msg("Product ID is required")]
     MissingProductId,
+    
+    #[msg("SOL deposit amount must be greater than zero")]
+    InsufficientSolDeposit,
+    
+    #[msg("Deposit would mint points exceeding maximum token supply")]
+    DepositExceedsMaxSupply,
+    
+    #[msg("Insufficient loyalty points balance for this purchase")]
+    InsufficientPointsBalance,
+    
+    #[msg("Invalid SOL to points ratio - must be greater than zero")]
+    InvalidRatio,
 }

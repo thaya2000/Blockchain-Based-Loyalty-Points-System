@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-loyalty_program = "DdG9NoqiKjAmoiGoKprBi12XXhLAJbjfqyNXYQXhELpk"
+loyalty_program = "9RkPYyU3tB5X9g2TkBPiZHUrVNRZjwjZ3Eu8LZhK4LXj"
 
 [programs.devnet]
-loyalty_program = "DdG9NoqiKjAmoiGoKprBi12XXhLAJbjfqyNXYQXhELpk"
+loyalty_program = "9RkPYyU3tB5X9g2TkBPiZHUrVNRZjwjZ3Eu8LZhK4LXj"
 
 [registry]
 url = "https://api.apr.dev"
