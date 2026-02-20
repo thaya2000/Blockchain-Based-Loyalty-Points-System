@@ -165,7 +165,7 @@ const App: FC = () => {
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect={false}>
+      <WalletProvider wallets={wallets} autoConnect>
         <BrowserRouter>
             <UserRoleProvider>
               <AppRoutes />

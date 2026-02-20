@@ -8,7 +8,7 @@ import WalletModal from './WalletModal';
 const Navbar: FC = () => {
   const location = useLocation();
   const { role, loading } = useUserRole();
-  const { connected, connecting, publicKey, disconnect, select, connect } = useWallet();
+  const { connected, connecting, publicKey, disconnect, select } = useWallet();
   const [showRegister, setShowRegister] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   // clickedConnect covers the brief gap between user clicking and Wallet Standard
@@ -27,55 +27,22 @@ const Navbar: FC = () => {
   }, [connecting, connected]);
 
   // Called when user picks a wallet from the modal.
+  // Best practice: only call select() here. WalletProvider's autoConnect
+  // handles connect() internally via useEffect after React commits the state,
+  // avoiding the WalletNotSelectedError race condition.
   const handleWalletSelect = useCallback(
     (walletName: string) => {
-      console.log('[Navbar] handleWalletSelect called', { walletName });
-      setClickedConnect(true);
-      console.log('[Navbar] clickedConnect -> true');
       setShowWalletModal(false);
-      console.log('[Navbar] wallet modal closed');
       // @ts-ignore - WalletName is a branded string
-      try {
-        select(walletName);
-        console.log('[Navbar] select() invoked', { walletName });
-      } catch (err) {
-        console.error('[Navbar] select() threw an error', err);
-      }
-
-      // Safety timeout: if wallet never connects in 5s, reset button
-      if (clickTimeoutRef.current) {
-        console.log('[Navbar] clearing existing click timeout');
-        clearTimeout(clickTimeoutRef.current);
-      }
-      clickTimeoutRef.current = setTimeout(() => {
-        console.log('[Navbar] click timeout fired — resetting clickedConnect');
-        setClickedConnect(false);
-      }, 5000);
-
-      setTimeout(() => {
-        console.log('[Navbar] Attempting to connect after 300ms delay');
-      }, 300);
-
-      connect()
-        .then(() => console.log('[Navbar] connect() resolved successfully'))
-        .catch((err) => {
-          console.warn('[Navbar] connect() threw an error, but Wallet Standard may still connect. Waiting for connection...', err);
-        });
-      
-
-      // Wallet Standard auto-connects after select() — connect() may throw
-      // WalletNotSelectedError but the wallet still connects via Wallet Standard.
-      // We keep clickedConnect=true and let the useEffect clear it when connected=true.
-      // console.log('[Navbar] scheduling connect() in 300ms');
-      // setTimeout(() => {
-      //   connect()
-      //     .then(() => console.log('[Navbar] connect() resolved'))
-      //     .catch((err) => {
-      //       console.warn('[Navbar] Wallet connect failed, but Wallet Standard may still connect. Waiting for connection...', err);
-      //     });
-      // }, 300);
+      select(walletName);
+      // Set interim flag so the button shows a loading state during the
+      // brief gap before connecting=true propagates.
+      setClickedConnect(true);
+      // Safety timeout: reset flag if wallet never connects in 5s
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = setTimeout(() => setClickedConnect(false), 5000);
     },
-    [select, connect]
+    [select]
   );
 
   const isActive = (path: string) => location.pathname === path;
