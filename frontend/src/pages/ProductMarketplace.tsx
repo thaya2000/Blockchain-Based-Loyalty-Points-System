@@ -243,64 +243,168 @@ export default function ProductMarketplace() {
                 </div>
 
                 {/* Info */}
-                <div style={{ padding: '18px' }}>
-                  <div style={{
-                    display: 'inline-block', padding: '3px 10px',
-                    background: 'rgba(99,102,241,0.15)', color: '#a5b4fc',
-                    borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-                    marginBottom: '8px',
-                  }}>{product.businessName}</div>
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
+                  {/* Header with Product Name */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <h3 style={{ margin: '0 0 6px', fontSize: '1.15rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.3px' }}>
+                      {product.name}
+                    </h3>
+                    <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                      {product.description}
+                    </p>
+                  </div>
 
-                  <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9' }}>
-                    {product.name}
-                  </h3>
-                  <p style={{ margin: '0 0 14px', color: '#94a3b8', fontSize: '0.85rem', lineHeight: 1.5, minHeight: '2.5rem' }}>
-                    {product.description}
-                  </p>
-
-                  {/* Pricing */}
-                  <div style={{
-                    background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
-                    borderRadius: '12px', padding: '12px', marginBottom: '14px',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: product.priceLoyaltyPoints ? '8px' : '0' }}>
-                      <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>Pay with SOL</span>
-                      <span style={{ color: '#c4b5fd', fontWeight: 700, fontSize: '1rem' }}>
-                        ◎ {(product.priceSol / 1e9).toFixed(3)}
+                  {/* Merchant & Stock Info Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                    {/* Merchant Name Badge */}
+                    <div style={{
+                      padding: '9px 12px',
+                      background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(14,165,233,0.15) 100%)',
+                      border: '1px solid rgba(59,130,246,0.4)',
+                      borderRadius: '9px',
+                      fontSize: '0.75rem', fontWeight: 700,
+                      color: '#60a5fa',
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 8px rgba(59,130,246,0.08)'
+                    }}>
+                      <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>🏢</span>
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {product.businessName || 'Unknown'}
                       </span>
                     </div>
+
+                    {/* Stock Status Badge */}
+                    <div style={{
+                      padding: '9px 12px',
+                      background: product.stockQuantity === null || product.stockQuantity > 0 
+                        ? 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,150,105,0.15) 100%)'
+                        : 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.15) 100%)',
+                      border: `1px solid ${product.stockQuantity === null || product.stockQuantity > 0 
+                        ? 'rgba(16,185,129,0.4)'
+                        : 'rgba(239,68,68,0.4)'}`,
+                      borderRadius: '9px',
+                      fontSize: '0.75rem', fontWeight: 700,
+                      color: product.stockQuantity === null || product.stockQuantity > 0 ? '#10b981' : '#ef4444',
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      boxShadow: `0 2px 8px ${product.stockQuantity === null || product.stockQuantity > 0 
+                        ? 'rgba(16,185,129,0.08)'
+                        : 'rgba(239,68,68,0.08)'}`
+                    }}>
+                      <span style={{ fontSize: '0.9rem' }}>
+                        {product.stockQuantity === null || product.stockQuantity > 0 ? '📦' : '🚫'}
+                      </span>
+                      <span>
+                        {product.stockQuantity === null 
+                          ? 'Unlimited' 
+                          : product.stockQuantity > 0
+                          ? `${product.stockQuantity} left`
+                          : 'Out of Stock'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Pricing & Purchase Section */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '0' }}>
+                    {/* SOL Price Card */}
+                    <div style={{
+                      background: 'linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(99,102,241,0.15) 100%)',
+                      border: '1.5px solid rgba(139,92,246,0.4)',
+                      borderRadius: '11px',
+                      padding: '14px',
+                      textAlign: 'center',
+                      transition: 'all 0.3s',
+                      cursor: 'pointer',
+                    }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(139,92,246,0.6)';
+                        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 16px rgba(139,92,246,0.15)';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(139,92,246,0.4)';
+                        (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+                      }}
+                    >
+                      <div style={{ color: '#cbd5e1', fontSize: '0.7rem', fontWeight: 600, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>SOL Price</div>
+                      <div style={{ color: '#c084fc', fontWeight: 900, fontSize: '1.4rem' }}>
+                        ◎ {(product.priceSol / 1e9).toFixed(3)}
+                      </div>
+                    </div>
+
+                    {/* LP Price Card */}
                     {product.priceLoyaltyPoints && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>Pay with Points</span>
-                        <span style={{ color: '#6ee7b7', fontWeight: 700, fontSize: '1rem' }}>
+                      <div style={{
+                        background: 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(5,150,105,0.15) 100%)',
+                        border: '1.5px solid rgba(16,185,129,0.4)',
+                        borderRadius: '11px',
+                        padding: '14px',
+                        textAlign: 'center',
+                        transition: 'all 0.3s',
+                        cursor: 'pointer',
+                      }}
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(16,185,129,0.6)';
+                          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 16px rgba(16,185,129,0.15)';
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(16,185,129,0.4)';
+                          (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+                        }}
+                      >
+                        <div style={{ color: '#cbd5e1', fontSize: '0.7rem', fontWeight: 600, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Points Price</div>
+                        <div style={{ color: '#6ee7b7', fontWeight: 900, fontSize: '1.4rem' }}>
                           💎 {product.priceLoyaltyPoints}
-                        </span>
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Buttons */}
-                  <div style={{ display: 'grid', gap: '8px' }}>
+                  {/* Purchase Buttons */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '14px' }}>
                     <button
                       onClick={() => { setSelectedProduct(product); setCurrentPaymentType('sol'); }}
                       style={{
-                        padding: '11px', borderRadius: '10px', border: 'none',
-                        background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                        color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(139,92,246,0.3)', transition: 'all 0.2s',
+                        padding: '14px 18px', borderRadius: '10px', border: 'none',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
+                        color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                        boxShadow: '0 6px 20px rgba(139,92,246,0.4)', transition: 'all 0.2s',
                       }}
-                    >◎ Buy with SOL</button>
-                    {product.priceLoyaltyPoints && (
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(139,92,246,0.6)';
+                        (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-3px)';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 20px rgba(139,92,246,0.4)';
+                        (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                      }}
+                    >◎ Buy SOL</button>
+                    {product.priceLoyaltyPoints ? (
                       <button
                         onClick={() => { setSelectedProduct(product); setCurrentPaymentType('loyalty_points'); }}
                         style={{
-                          padding: '11px', borderRadius: '10px',
-                          border: '1.5px solid rgba(16,185,129,0.4)',
-                          background: 'rgba(16,185,129,0.1)',
-                          color: '#6ee7b7', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                          transition: 'all 0.2s',
+                          padding: '14px 18px', borderRadius: '10px', border: '2px solid rgba(16,185,129,0.6)',
+                          background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.08) 100%)',
+                          color: '#10b981', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(16,185,129,0.2)', transition: 'all 0.2s',
                         }}
-                      >💎 Buy with Points</button>
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(5,150,105,0.15) 100%)';
+                          (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 18px rgba(16,185,129,0.35)';
+                          (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-3px)';
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.08) 100%)';
+                          (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 12px rgba(16,185,129,0.2)';
+                          (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                        }}
+                      >💎 Buy Points</button>
+                    ) : (
+                      <div style={{
+                        padding: '14px 18px', borderRadius: '10px',
+                        background: 'rgba(99,102,241,0.08)',
+                        color: '#6b7280', fontWeight: 700, fontSize: '0.9rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>Not Available</div>
                     )}
                   </div>
                 </div>
@@ -356,6 +460,13 @@ export default function ProductMarketplace() {
                   </h3>
                   <p style={{ margin: '0 0 8px', color: '#94a3b8', fontSize: '0.82rem' }}>
                     From: {selectedProduct.businessName}
+                  </p>
+                  <p style={{ margin: '0 0 8px', color: '#94a3b8', fontSize: '0.82rem' }}>
+                    {selectedProduct.stockQuantity === null 
+                      ? '📦 Unlimited Stock' 
+                      : selectedProduct.stockQuantity > 0
+                      ? `📦 ${selectedProduct.stockQuantity} in stock`
+                      : '❌ Out of Stock'}
                   </p>
                   <span style={{
                     display: 'inline-block', padding: '4px 12px',

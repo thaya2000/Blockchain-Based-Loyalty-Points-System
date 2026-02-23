@@ -12,25 +12,27 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { merchantId, available } = req.query;
 
-    let query = 'SELECT * FROM products WHERE 1=1';
+    let query = `SELECT p.*, m.business_name FROM products p 
+                 LEFT JOIN merchants m ON p.merchant_id = m.id WHERE 1=1`;
     const params: any[] = [];
 
     if (merchantId) {
       params.push(merchantId);
-      query += ` AND merchant_id = $${params.length}`;
+      query += ` AND p.merchant_id = $${params.length}`;
     }
 
     if (available === 'true') {
-      query += ' AND is_available = true';
+      query += ' AND p.is_available = true';
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY p.created_at DESC';
 
     const result = await pool.query(query, params);
 
     const products: Product[] = result.rows.map(row => ({
       id: row.id,
       merchantId: row.merchant_id,
+      businessName: row.business_name,
       name: row.name,
       description: row.description,
       priceSol: parseInt(row.price_sol),

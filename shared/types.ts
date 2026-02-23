@@ -28,6 +28,7 @@ export interface Merchant {
 export interface Product {
   id: string;
   merchantId: string;
+  businessName?: string; // Merchant business name
   name: string;
   description?: string;
   priceSol: number; // In lamports
