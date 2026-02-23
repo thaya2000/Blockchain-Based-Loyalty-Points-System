@@ -1,269 +1,221 @@
-# Solana-Based Loyalty Points Platform
+# Blockchain-Based Loyalty Points System
 
-A public blockchain loyalty platform built on **Solana** enabling interchangeable loyalty points across multiple merchants.
+A full-stack blockchain loyalty platform built on **Solana** that enables merchants to issue and manage interchangeable loyalty points across a decentralized ecosystem.
+
+---
+
+## Overview
+
+A complete solution for merchants and consumers to engage in a transparent, on-chain loyalty program. Customers earn and redeem loyalty points through purchases, merchants manage their product catalogs, and all transactions are recorded on the Solana blockchain for complete auditability.
+
+### Key Capabilities
+
+- **Multi-Merchant Ecosystem** — Decentralized network with self-registration and admin approval workflows
+- **Dual Payment System** — Accept both SOL and loyalty points for purchases
+- **On-chain Transactions** — All token operations executed atomically via Solana smart contracts
+- **SPL Token Standard** — Full compatibility with Solana's Token Program ecosystem
+- **Admin Dashboard** — Merchant approval, platform analytics, and system monitoring
+- **Real-time Inventory** — Product catalog management with live stock tracking
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                      │
-│              Wallet Connect │ Consumer/Merchant Dashboards   │
-└───────────────────────────────┬─────────────────────────────┘
-                                │
-┌───────────────────────────────┴─────────────────────────────┐
-│                     Backend API (Node.js)                    │
-│         User Profiles │ Merchant Metadata │ Rewards Catalog  │
-└─────────────┬───────────────────────────────────┬───────────┘
-              │                                   │
-┌─────────────┴─────────────┐   ┌─────────────────┴───────────┐
-│      PostgreSQL DB        │   │     Solana Localhost/Devnet  │
-│  (Off-chain metadata)     │   │  (Token balances, mint/burn) │
-└───────────────────────────┘   └──────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    Frontend (React + Vite)                   │
+│              Wallet Adapter • User/Merchant Dashboards       │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ REST API
+┌───────────────────────────┴────────────────────────────────────┐
+│                  Backend API (Node.js + Express)               │
+│         Authentication • Business Logic • Data Layer           │
+└──────┬────────────────────────────────────────────┬────────────┘
+       │                                            │
+   ┌───┴──────────────────┐     ┌─────────────────┴──────────────┐
+   │   PostgreSQL DB      │     │   Solana Blockchain            │
+   │  (Off-chain Data)    │     │   (Token State + Transactions) │
+   │  • Merchants         │     │   • SPL Token Balances         │
+   │  • Products          │     │   • Transaction Records        │
+   │  • Orders            │     │   • Program State              │
+   └──────────────────────┘     └────────────────────────────────┘
 ```
+
+---
+
+## Technology Stack
+
+| Layer | Technologies |
+|-------|--------------|
+| **Frontend** | React 18, TypeScript, Vite 5, Tailwind CSS 4, React Router v6, Solana Wallet Adapter |
+| **Backend** | Node.js, Express, TypeScript, PostgreSQL, tsx, Vitest |
+| **Blockchain** | Solana, Anchor 0.30.1, Rust, SPL Token |
+
+---
 
 ## Prerequisites
 
-Ensure you have the following installed:
+```
+Node.js 18+       node --version
+PostgreSQL 14+    psql --version
+Rust 1.70+        rustc --version
+Solana CLI 1.18+  solana --version
+Anchor 0.30.1     anchor --version
+```
 
-- **Rust** (1.70+)
-- **Solana CLI** (1.18+) - `solana --version`
-- **Anchor** (0.30+) - `anchor --version`
-- **Node.js** (18+) - `node --version`
-- **PostgreSQL** (14+) - Can use Windows PostgreSQL from WSL
+### Browser Wallet
 
-## Setup Instructions
+Install one of the following extensions:
+- **Phantom** — https://phantom.app *(recommended)*
+- **Solflare** — https://solflare.com
+- **Backpack** — https://backpack.app
 
-### 1. Clone and Install Dependencies
+---
+
+## Quick Start
+
+### 1. Clone & Install
 
 ```bash
-# Navigate to project root
+git clone https://github.com/thaya2000/Blockchain-Based-Loyalty-Points-System.git
 cd blockchain-loyalty
 
-# Install root dependencies
 npm install
-
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../frontend
-npm install
+cd backend && npm install && cd ..
+cd frontend && npm install && cd ..
 ```
 
-### 2. Configure PostgreSQL Database
+### 2. Environment Configuration
 
-**Option A: If using Windows PostgreSQL from WSL**
-
-Find your Windows host IP:
-```bash
-cat /etc/resolv.conf | grep nameserver | awk '{print $2}'
-# Note the IP (e.g., 172.31.16.1)
-```
-
-**Option B: If using Linux PostgreSQL**
-```bash
-sudo service postgresql start
-```
-
-Create the database:
-```bash
-# Replace <HOST_IP> with localhost or Windows host IP
-psql -h <HOST_IP> -U postgres -d postgres -c "CREATE DATABASE loyalty_db;"
-```
-
-### 3. Setup Environment Variables
-
-Create `.env` file in the **root directory**:
+**`.env`** (project root):
 
 ```env
 # Solana
 SOLANA_RPC_URL=http://127.0.0.1:8899
-PROGRAM_ID=<your-program-id>
+PROGRAM_ID=9RkPYyU3tB5X9g2TkBPiZHUrVNRZjwjZ3Eu8LZhK4LXj
 
-# PostgreSQL (update with your password and host IP)
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@HOST_IP:5432/loyalty_db
+# PostgreSQL
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/loyalty_db
 
 # Backend
 PORT=3001
-JWT_SECRET=change_this_to_a_secure_random_string
-```
+JWT_SECRET=your-secure-random-string
 
-Create `.env` file in the **frontend directory** (`frontend/.env`):
-
-```env
+# Frontend
 VITE_API_URL=http://localhost:3001
 VITE_SOLANA_RPC_URL=http://localhost:8899
-VITE_PROGRAM_ID=<your-program-id>
+VITE_PROGRAM_ID=9RkPYyU3tB5X9g2TkBPiZHUrVNRZjwjZ3Eu8LZhK4LXj
+VITE_PLATFORM_AUTHORITY=your-platform-authority-public-key
 ```
 
-### 4. Start Solana Test Validator
+### 3. Start Local Validator
 
-Open a new terminal and run:
 ```bash
+# Terminal 1
 solana-test-validator
-```
 
-Keep this running in the background.
-
-### 5. Configure Solana CLI
-
-```bash
-# Set to localhost
+# Configure CLI
 solana config set --url http://localhost:8899
-
-# Check your configuration
-solana config get
 ```
 
-### 6. Build and Deploy Solana Program
-
-```bash
-# Build the program
-anchor build
-
-# Get the program ID
-solana address -k target/deploy/loyalty_program-keypair.json
-
-# Update PROGRAM_ID in both .env files with this address
-
-# Deploy the program
-solana program deploy target/deploy/loyalty_program.so
-```
-
-If deployment fails due to insufficient funds:
-```bash
-# Airdrop SOL to your wallet
-solana airdrop 5
-```
-
-### 7. Run Database Migration
+### 4. Initialize Database
 
 ```bash
 cd backend
 npm run migrate
+# ✅ Database schema applied successfully
 ```
 
-You should see: ✅ Database schema applied successfully
+### 5. Build & Deploy Smart Contract
 
-### 8. Start Backend Server
-
-In a new terminal:
 ```bash
-cd backend
-npm run dev
+anchor build
+
+# Verify program ID
+solana address -k target/deploy/loyalty_program-keypair.json
+
+# Deploy
+anchor deploy
+
+# Fund deployer if needed
+solana airdrop 5
 ```
 
-Backend should be running on `http://localhost:3001`
+### 6. Start Services
 
-### 9. Start Frontend Development Server
-
-In another new terminal:
 ```bash
-cd frontend
-npm run dev
+# Terminal 2 — Backend API
+cd backend && npm run dev
+
+# Terminal 3 — Frontend
+cd frontend && npm run dev
 ```
 
-Frontend should be accessible at `http://localhost:5173`
+### 7. Configure Wallet
 
-### 10. Setup Solana Wallet
+1. Open your wallet extension → Settings → Network
+2. Add custom RPC: `http://localhost:8899`
+3. Fund your wallet:
+   ```bash
+   solana airdrop 10 <YOUR_WALLET_ADDRESS>
+   ```
 
-**Install a Solana wallet:**
-- **Phantom**: https://phantom.app (most popular)
-- **Solflare**: https://solflare.com
-- **Backpack**: https://backpack.app
+### 8. Open Application
 
-**Configure wallet for localhost:**
-1. Open your wallet extension
-2. Go to Settings → Network
-3. Add Custom RPC: `http://localhost:8899`
-4. Or set to "Localhost" if available
+Navigate to `http://localhost:5173` and connect your wallet.
 
-**Get test SOL:**
-```bash
-# Copy your wallet address from the wallet extension
-solana airdrop 10 <YOUR_WALLET_ADDRESS>
-
-# Verify balance
-solana balance <YOUR_WALLET_ADDRESS>
-```
-
-### 11. Access the Application
-
-1. Open browser to `http://localhost:5173`
-2. Click "Connect Wallet"
-3. Select your wallet (Phantom/Solflare/Backpack)
-4. Approve the connection
-5. You should see your SOL balance on the dashboard!
-
-## Running Services Summary
-
-You need **4 terminals running simultaneously**:
-
-1. **Terminal 1**: `solana-test-validator` (Solana local validator)
-2. **Terminal 2**: `cd backend && npm run dev` (Backend API)
-3. **Terminal 3**: `cd frontend && npm run dev` (Frontend UI)
-4. **Terminal 4**: Available for commands (airdrop, deploy, etc.)
-
-## Troubleshooting
-
-### Issue: Wallet shows 0 SOL
-- Ensure wallet is connected to `http://localhost:8899`
-- Run: `solana balance <YOUR_WALLET_ADDRESS>` to verify
-- Airdrop more SOL if needed
-
-### Issue: Frontend shows devnet instead of localhost
-- Check `frontend/.env` has `VITE_SOLANA_RPC_URL=http://localhost:8899`
-- Hard refresh browser (Ctrl+Shift+R)
-- Restart frontend: `cd frontend && npm run dev`
-
-### Issue: Database connection failed
-- Verify PostgreSQL is running
-- Check DATABASE_URL in `.env` has correct password and host IP
-- Test connection: `psql -h <HOST_IP> -U postgres -d loyalty_db`
-
-### Issue: Program deployment fails
-- Airdrop SOL to deployer: `solana airdrop 5`
-- Check validator is running: `solana cluster-version`
-- Rebuild: `anchor build`
+---
 
 ## Project Structure
 
 ```
-/
-├── programs/               # Solana smart contracts (Anchor)
-│   └── loyalty_program/
-├── backend/                # Node.js API server
-├── frontend/               # React web application
-├── shared/                 # Shared types and constants
-└── README.md
+blockchain-loyalty/
+├── programs/loyalty_program/    # Anchor smart contract (Rust)
+│   └── src/
+│       ├── lib.rs               # Program entry + instruction routing
+│       ├── state.rs             # On-chain data structures
+│       ├── errors.rs            # Custom error codes
+│       └── instructions/        # Transaction handlers
+│
+├── backend/                     # Express API server (TypeScript)
+│   └── src/
+│       ├── server.ts            # App entry point
+│       ├── db/                  # PostgreSQL layer + migrations
+│       ├── routes/              # REST endpoints
+│       ├── middleware/          # Auth middleware
+│       └── services/            # Business logic + Solana integration
+│
+├── frontend/                    # React SPA (TypeScript + Vite)
+│   └── src/
+│       ├── App.tsx              # Root component + routing
+│       ├── pages/               # Route-level views
+│       ├── components/          # Reusable UI components
+│       ├── context/             # React context providers
+│       ├── services/            # API client
+│       └── utils/               # Helpers
+│
+├── shared/                      # Shared types & constants
+├── tests/                       # Anchor integration tests
+├── scripts/                     # Setup & utility scripts
+└── Anchor.toml                  # Anchor workspace config
 ```
 
-## Key Features
+---
 
-- **Multi-merchant support**: Any registered merchant can issue points
-- **Interchangeable tokens**: Points work across all merchants
-- **On-chain ownership**: Consumers own tokens in their wallets
-- **SPL token standard**: Full compatibility with Solana ecosystem
-- **Public auditability**: All transactions verifiable on-chain
+## Smart Contract Instructions
 
-## Environment Variables
+| Instruction | Access | Description |
+|-------------|--------|-------------|
+| `initialize_platform` | Admin | Bootstrap platform, create SPL token mint |
+| `register_merchant` | Admin | Authorize a new merchant |
+| `revoke_merchant` | Admin | Revoke merchant authorization |
+| `mint_points` | Merchant | Mint loyalty points to a consumer |
+| `purchase_product_with_sol` | Consumer | Buy product with SOL, earn points |
+| `purchase_product_with_points` | Consumer | Buy product by burning points |
+| `redeem_points` | Consumer | Redeem points at a merchant |
+| `deposit_sol` | Merchant | Deposit SOL to receive points |
 
-Create `.env` in root:
+---
 
-```env
-# Solana
-SOLANA_RPC_URL=https://api.devnet.solana.com
-PROGRAM_ID=<your-deployed-program-id>
 
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/loyalty_db
-
-# Backend
-PORT=3001
-JWT_SECRET=your-jwt-secret
-```
-
-## License
-
-MIT
+*Built with Solana · Anchor · React · Node.js*
