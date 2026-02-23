@@ -145,20 +145,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // ============================================
 
 const server = app.listen(PORT, () => {
-  console.log(`
-╔════════════════════════════════════════════════════════╗
-║     Loyalty Platform Backend API                       ║
-║     Running on http://localhost:${PORT}                    ║
-╠════════════════════════════════════════════════════════╣
-║  Endpoints:                                            ║
-║    GET  /health             - Health check             ║
-║    GET  /api/platform       - Platform info            ║
-║    GET  /api/merchants      - List merchants           ║
-║    GET  /api/users/:wallet  - Get user profile         ║
-║    GET  /api/rewards        - List rewards             ║
-║    POST /api/transactions/* - Log transactions         ║
-╚════════════════════════════════════════════════════════╝
-  `);
+  console.log(`✅ Loyalty Platform Backend running on http://localhost:${PORT}`);
 });
 
 // Graceful shutdown handler
