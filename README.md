@@ -103,7 +103,7 @@ JWT_SECRET=your-secure-random-string
 
 # Frontend
 VITE_API_URL=http://localhost:3001
-VITE_SOLANA_RPC_URL=http://localhost:8899
+VITE_SOLANA_RPC_URL=http://127.0.0.1:8899
 VITE_PROGRAM_ID=9RkPYyU3tB5X9g2TkBPiZHUrVNRZjwjZ3Eu8LZhK4LXj
 VITE_PLATFORM_AUTHORITY=your-platform-authority-public-key
 ```

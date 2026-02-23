@@ -8,12 +8,13 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as dotenv from "dotenv";
 
-const PROGRAM_ID = new PublicKey("9RkPYyU3tB5X9g2TkBPiZHUrVNRZjwjZ3Eu8LZhK4LXj");
-const RPC_URL = "http://localhost:8899";
+dotenv.config();
 
-// Admin / protocol treasury wallet — must match ~/.config/solana/id.json pubkey
-const PROTOCOL_TREASURY = new PublicKey("HQafx3NKvQgY4qus6wnfhZuDyU7UYCAyRGb4tnDtkDdU");
+const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID || "9RkPYyU3tB5X9g2TkBPiZHUrVNRZjwjZ3Eu8LZhK4LXj");
+const RPC_URL = process.env.SOLANA_RPC_URL || "http://localhost:8899";
+const PROTOCOL_TREASURY = new PublicKey(process.env.VITE_PLATFORM_AUTHORITY || "HQafx3NKvQgY4qus6wnfhZuDyU7UYCAyRGb4tnDtkDdU");
 
 // Platform config
 const TOKEN_DECIMALS = 6;
