@@ -3,6 +3,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useNavigate } from 'react-router-dom';
 import { useUserRole } from '../context/UserRoleContext';
 import { purchaseProductWithSOL, redeemLoyaltyPoints } from '../services/payment';
+import MessageModal from '../components/MessageModal';
 
 interface Product {
   id: string;
@@ -28,7 +29,12 @@ export default function ProductMarketplace() {
   const [processing, setProcessing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [currentPaymentType, setCurrentPaymentType] = useState<'sol' | 'loyalty_points'>('sol');
-  const [purchaseMsg, setPurchaseMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [messageModal, setMessageModal] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'info';
+    title?: string;
+    message: string;
+  }>({ isOpen: false, type: 'success', message: '' });
 
   // Redirect merchants away from marketplace
   useEffect(() => {
@@ -61,13 +67,26 @@ export default function ProductMarketplace() {
   };
 
   const handlePurchase = async (product: Product, paymentType: 'sol' | 'loyalty_points') => {
-    if (!publicKey) { alert('Please connect your wallet first'); return; }
+    if (!publicKey) { 
+      setMessageModal({
+        isOpen: true,
+        type: 'info',
+        title: 'Wallet Not Connected',
+        message: 'Please connect your wallet first to make a purchase.',
+      });
+      return; 
+    }
     if (paymentType === 'loyalty_points' && !product.priceLoyaltyPoints) {
-      alert('This product cannot be purchased with loyalty points'); return;
+      setMessageModal({
+        isOpen: true,
+        type: 'info',
+        title: 'Not Available',
+        message: 'This product cannot be purchased with loyalty points.',
+      });
+      return;
     }
 
     setProcessing(true);
-    setPurchaseMsg(null);
     try {
       const orderResponse = await fetch('http://localhost:3001/api/orders', {
         method: 'POST',
@@ -100,13 +119,24 @@ export default function ProductMarketplace() {
         body: JSON.stringify({ txSignature, status: 'confirmed' }),
       });
 
-      setPurchaseMsg({
+      setMessageModal({
+        isOpen: true,
         type: 'success',
-        text: `✅ Order #${order.orderNumber} confirmed! Tx: ${txSignature.slice(0, 20)}... ${paymentType === 'sol' ? `+${product.loyaltyPointsReward} LP earned!` : `${product.priceLoyaltyPoints} LP redeemed!`}`,
+        title: 'Purchase Successful',
+        message: `Order #${order.orderNumber}\n\n${product.name} purchased\n\n${
+          paymentType === 'sol' 
+            ? `You earned ${product.loyaltyPointsReward} LP` 
+            : `You redeemed ${product.priceLoyaltyPoints} LP`
+        }\n\nTx: ${txSignature.slice(0, 16)}...${txSignature.slice(-8)}`,
       });
       setSelectedProduct(null);
     } catch (error: any) {
-      setPurchaseMsg({ type: 'error', text: `❌ Purchase failed: ${error.message || 'Unknown error'}` });
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Purchase Failed',
+        message: error.message || 'An unexpected error occurred during the purchase. Please try again.',
+      });
     } finally {
       setProcessing(false);
     }
@@ -138,19 +168,6 @@ export default function ProductMarketplace() {
             Purchase products with SOL or redeem your loyalty points
           </p>
         </div>
-
-        {/* ── Purchase message ── */}
-        {purchaseMsg && (
-          <div style={{
-            padding: '14px 20px', borderRadius: '12px', marginBottom: '28px',
-            fontSize: '0.9rem', fontWeight: 500,
-            background: purchaseMsg.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-            border: `1px solid ${purchaseMsg.type === 'success' ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
-            color: purchaseMsg.type === 'success' ? '#6ee7b7' : '#fca5a5',
-          }}>
-            {purchaseMsg.text}
-          </div>
-        )}
 
         {/* ── Grid ── */}
         {loading ? (
@@ -265,7 +282,7 @@ export default function ProductMarketplace() {
                   {/* Buttons */}
                   <div style={{ display: 'grid', gap: '8px' }}>
                     <button
-                      onClick={() => { setSelectedProduct(product); setCurrentPaymentType('sol'); setPurchaseMsg(null); }}
+                      onClick={() => { setSelectedProduct(product); setCurrentPaymentType('sol'); }}
                       style={{
                         padding: '11px', borderRadius: '10px', border: 'none',
                         background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
@@ -275,7 +292,7 @@ export default function ProductMarketplace() {
                     >◎ Buy with SOL</button>
                     {product.priceLoyaltyPoints && (
                       <button
-                        onClick={() => { setSelectedProduct(product); setCurrentPaymentType('loyalty_points'); setPurchaseMsg(null); }}
+                        onClick={() => { setSelectedProduct(product); setCurrentPaymentType('loyalty_points'); }}
                         style={{
                           padding: '11px', borderRadius: '10px',
                           border: '1.5px solid rgba(16,185,129,0.4)',
@@ -413,6 +430,14 @@ export default function ProductMarketplace() {
         @keyframes spin { to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
       `}</style>
-    </div>
+
+      <MessageModal
+        isOpen={messageModal.isOpen}
+        type={messageModal.type}
+        title={messageModal.title}
+        message={messageModal.message}
+        onClose={() => setMessageModal({ isOpen: false, type: 'success', message: '' })}
+        autoCloseDuration={messageModal.type === 'success' ? 3000 : 4000}
+      />    </div>
   );
 }

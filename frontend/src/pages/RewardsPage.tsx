@@ -1,6 +1,7 @@
 import { FC, useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import RewardCard from '../components/RewardCard';
+import MessageModal from '../components/MessageModal';
 
 interface Reward {
   id: string;
@@ -27,6 +28,12 @@ const RewardsPage: FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [redeemingReward, setRedeemingReward] = useState<Reward | null>(null);
+  const [messageModal, setMessageModal] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'info';
+    title?: string;
+    message: string;
+  }>({ isOpen: false, type: 'success', message: '' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,12 +73,12 @@ const RewardsPage: FC = () => {
 
   const handleRedeem = (reward: Reward) => {
     setRedeemingReward(reward);
-    // In real implementation:
-    // 1. Build redeem_points transaction
-    // 2. Have user sign
-    // 3. Submit to blockchain
-    // 4. Log in backend
-    alert(`Redeeming ${reward.name} for ${reward.pointsCost / 1_000_000} points`);
+    setMessageModal({
+      isOpen: true,
+      type: 'info',
+      title: 'Redeeming Reward',
+      message: `Redeeming ${reward.name} for ${reward.pointsCost / 1_000_000} points. In a real implementation, this would build a redeem_points transaction and submit to the blockchain.`,
+    });
   };
 
   // Get unique categories
@@ -215,8 +222,15 @@ const RewardsPage: FC = () => {
           ))}
         </div>
       </section>
-    </div>
-  );
+
+      <MessageModal
+        isOpen={messageModal.isOpen}
+        type={messageModal.type}
+        title={messageModal.title}
+        message={messageModal.message}
+        onClose={() => setMessageModal({ isOpen: false, type: 'success', message: '' })}
+        autoCloseDuration={messageModal.type === 'success' ? 3000 : 4000}
+      />
 };
 
 export default RewardsPage;

@@ -83,4 +83,14 @@ pub mod loyalty_program {
     ) -> Result<()> {
         instructions::purchase_with_points::handler(ctx, product_id_hash, points_amount, nonce)
     }
+
+    /// Set Metaplex token metadata (name, symbol, uri) for the loyalty token
+    pub fn set_token_metadata(
+        ctx: Context<SetTokenMetadata>,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
+        instructions::set_token_metadata::handler(ctx, name, symbol, uri)
+    }
 }

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useNavigate } from 'react-router-dom';
+import ConfirmModal from '../components/ConfirmModal';
+import MessageModal from '../components/MessageModal';
 
 interface Merchant {
   id: string;
@@ -42,6 +44,20 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
   const [allMerchants, setAllMerchants] = useState<Merchant[]>([]);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  
+  // Modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    merchantId?: string;
+    merchantName?: string;
+    action?: 'approve' | 'reject';
+  }>({ isOpen: false });
+  const [messageModal, setMessageModal] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'info';
+    title?: string;
+    message: string;
+  }>({ isOpen: false, type: 'success', message: '' });
 
   useEffect(() => {
     if (!connected || !publicKey) {
@@ -118,28 +134,56 @@ export default function AdminDashboard() {
 
   const handleApprove = async (merchantId: string) => {
     if (!publicKey) return;
-    if (!confirm('Are you sure you want to approve this merchant?')) return;
+    const merchant = pendingMerchants.find(m => m.id === merchantId);
+    setConfirmModal({
+      isOpen: true,
+      merchantId,
+      merchantName: merchant?.businessName,
+      action: 'approve',
+    });
+  };
 
+  const handleApproveConfirm = async () => {
+    if (!publicKey || !confirmModal.merchantId) return;
+    
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/merchants/${merchantId}/approve`, {
+      const response = await fetch(`http://localhost:3001/api/admin/merchants/${confirmModal.merchantId}/approve`, {
         method: 'POST',
         headers: {
           'X-Wallet-Address': publicKey.toBase58(),
         },
       });
       const data = await response.json();
+      setConfirmModal({ isOpen: false });
+      
       if (data.success) {
-        alert(data.message);
+        setMessageModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Merchant Approved',
+          message: data.message,
+        });
         fetchPendingMerchants();
         fetchStats();
         if (activeTab === 'all') fetchAllMerchants();
       } else {
-        alert(`Error: ${data.error}`);
+        setMessageModal({
+          isOpen: true,
+          type: 'error',
+          title: 'Approval Failed',
+          message: data.error || 'Failed to approve merchant',
+        });
       }
     } catch (error) {
       console.error('Error approving merchant:', error);
-      alert('Failed to approve merchant');
+      setConfirmModal({ isOpen: false });
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to approve merchant',
+      });
     } finally {
       setLoading(false);
     }
@@ -147,28 +191,56 @@ export default function AdminDashboard() {
 
   const handleReject = async (merchantId: string) => {
     if (!publicKey) return;
-    if (!confirm('Are you sure you want to reject this merchant?')) return;
+    const merchant = pendingMerchants.find(m => m.id === merchantId);
+    setConfirmModal({
+      isOpen: true,
+      merchantId,
+      merchantName: merchant?.businessName,
+      action: 'reject',
+    });
+  };
 
+  const handleRejectConfirm = async () => {
+    if (!publicKey || !confirmModal.merchantId) return;
+    
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/merchants/${merchantId}/reject`, {
+      const response = await fetch(`http://localhost:3001/api/admin/merchants/${confirmModal.merchantId}/reject`, {
         method: 'POST',
         headers: {
           'X-Wallet-Address': publicKey.toBase58(),
         },
       });
       const data = await response.json();
+      setConfirmModal({ isOpen: false });
+      
       if (data.success) {
-        alert(data.message);
+        setMessageModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Merchant Rejected',
+          message: data.message,
+        });
         fetchPendingMerchants();
         fetchStats();
         if (activeTab === 'all') fetchAllMerchants();
       } else {
-        alert(`Error: ${data.error}`);
+        setMessageModal({
+          isOpen: true,
+          type: 'error',
+          title: 'Rejection Failed',
+          message: data.error || 'Failed to reject merchant',
+        });
       }
     } catch (error) {
       console.error('Error rejecting merchant:', error);
-      alert('Failed to reject merchant');
+      setConfirmModal({ isOpen: false });
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to reject merchant',
+      });
     } finally {
       setLoading(false);
     }
@@ -1071,6 +1143,35 @@ export default function AdminDashboard() {
           }
         }
       `}</style>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.action === 'approve' ? 'Approve Merchant' : 'Reject Merchant'}
+        message={
+          <>
+            <strong>{confirmModal.merchantName}</strong>
+            <br />
+            <br />
+            {confirmModal.action === 'approve' 
+              ? 'Are you sure you want to approve this merchant? They will be able to access the dashboard and manage products.'
+              : 'Are you sure you want to reject this merchant? This action cannot be undone.'}
+          </>
+        }
+        confirmText={confirmModal.action === 'approve' ? '✓ Approve' : '✗ Reject'}
+        confirmButtonClass={confirmModal.action === 'approve' ? 'success' : 'danger'}
+        onConfirm={confirmModal.action === 'approve' ? handleApproveConfirm : handleRejectConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false })}
+        isLoading={loading}
+      />
+
+      <MessageModal
+        isOpen={messageModal.isOpen}
+        type={messageModal.type}
+        title={messageModal.title}
+        message={messageModal.message}
+        onClose={() => setMessageModal({ isOpen: false, type: 'success', message: '' })}
+        autoCloseDuration={messageModal.type === 'success' ? 3000 : 4000}
+      />
     </div>
   );
 }

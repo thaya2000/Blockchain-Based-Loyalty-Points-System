@@ -1,6 +1,7 @@
 import {
   Connection,
   PublicKey,
+  SystemProgram,
   Transaction,
   TransactionInstruction,
   Keypair,
@@ -11,6 +12,10 @@ import {
   TokenAccountNotFoundError,
 } from '@solana/spl-token';
 import { SOLANA_RPC_URL, PROGRAM_ID, LOYALTY_MINT_SEED, PLATFORM_STATE_SEED, MERCHANT_SEED } from '../../../shared/constants.js';
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 export class SolanaService {
   private connection: Connection;
@@ -164,6 +169,56 @@ export class SolanaService {
    */
   getConnection(): Connection {
     return this.connection;
+  }
+
+  /**
+   * Register a merchant on-chain by calling the register_merchant instruction.
+   * Loads admin keypair from ADMIN_KEYPAIR_PATH env var or ~/.config/solana/id.json.
+   * Default mint allowance: 100M LP (with 6 decimals).
+   */
+  async registerMerchantOnChain(
+    merchantWallet: string,
+    mintAllowance: bigint = BigInt(100_000_000) * BigInt(10 ** 6)
+  ): Promise<string> {
+    // Load admin keypair
+    const keypairPath =
+      process.env.ADMIN_KEYPAIR_PATH ||
+      path.join(os.homedir(), '.config/solana/id.json');
+    const keypairData = JSON.parse(fs.readFileSync(keypairPath, 'utf-8'));
+    const adminKeypair = Keypair.fromSecretKey(Uint8Array.from(keypairData));
+
+    // Derive PDAs
+    const [platformStatePDA] = this.getPlatformStatePDA();
+    const merchant = new PublicKey(merchantWallet);
+    const [merchantRecordPDA] = this.getMerchantPDA(merchant);
+
+    // Anchor discriminator: sha256("global:register_merchant")[0..8]
+    const disc = crypto
+      .createHash('sha256')
+      .update('global:register_merchant')
+      .digest()
+      .subarray(0, 8);
+
+    // Args: mint_allowance as u64 LE
+    const args = Buffer.alloc(8);
+    args.writeBigUInt64LE(mintAllowance, 0);
+
+    const data = Buffer.concat([disc, args]);
+
+    const ix = new TransactionInstruction({
+      programId: this.programId,
+      keys: [
+        { pubkey: adminKeypair.publicKey, isSigner: true,  isWritable: true  },
+        { pubkey: platformStatePDA,       isSigner: false, isWritable: true  },
+        { pubkey: merchant,               isSigner: false, isWritable: false },
+        { pubkey: merchantRecordPDA,      isSigner: false, isWritable: true  },
+        { pubkey: SystemProgram.programId,isSigner: false, isWritable: false },
+      ],
+      data,
+    });
+
+    const tx = new Transaction().add(ix);
+    return this.sendTransaction(tx, [adminKeypair]);
   }
 }
 

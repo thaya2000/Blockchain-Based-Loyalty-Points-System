@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import ConfirmModal from './ConfirmModal';
+import MessageModal from './MessageModal';
 
 interface Product {
   id: string;
@@ -43,6 +45,19 @@ export default function ProductManagement({ merchantId }: Props) {
     loyaltyPointsReward: '',
     stockQuantity: '',
   });
+  
+  // Modal state
+  const [messageModal, setMessageModal] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'info';
+    title?: string;
+    message: string;
+  }>({ isOpen: false, type: 'success', message: '' });
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    productId?: string;
+    productName?: string;
+  }>({ isOpen: false });
 
   useEffect(() => {
     fetchProducts();
@@ -105,15 +120,30 @@ export default function ProductManagement({ merchantId }: Props) {
 
       const data = await response.json();
       if (data.success) {
-        alert('Product created successfully!');
+        setMessageModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Product Created',
+          message: 'Product created successfully!',
+        });
         fetchProducts();
         resetForm();
       } else {
-        alert(`Error: ${data.error}`);
+        setMessageModal({
+          isOpen: true,
+          type: 'error',
+          title: 'Creation Failed',
+          message: data.error || 'Failed to create product',
+        });
       }
     } catch (error) {
       console.error('Error creating product:', error);
-      alert('Failed to create product');
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to create product',
+      });
     } finally {
       setLoading(false);
     }
@@ -154,15 +184,30 @@ export default function ProductManagement({ merchantId }: Props) {
 
       const data = await response.json();
       if (data.success) {
-        alert('Product updated successfully!');
+        setMessageModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Product Updated',
+          message: 'Product updated successfully!',
+        });
         fetchProducts();
         resetForm();
       } else {
-        alert(`Error: ${data.error}`);
+        setMessageModal({
+          isOpen: true,
+          type: 'error',
+          title: 'Update Failed',
+          message: data.error || 'Failed to update product',
+        });
       }
     } catch (error) {
       console.error('Error updating product:', error);
-      alert('Failed to update product');
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to update product',
+      });
     } finally {
       setLoading(false);
     }
@@ -199,22 +244,54 @@ export default function ProductManagement({ merchantId }: Props) {
     }
   };
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+  const handleDeleteProduct = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    setConfirmModal({
+      isOpen: true,
+      productId,
+      productName: product?.name,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!confirmModal.productId) return;
+    setLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/products/${productId}`, {
+      const response = await fetch(`http://localhost:3001/api/products/${confirmModal.productId}`, {
         method: 'DELETE',
       });
 
       const data = await response.json();
+      setConfirmModal({ isOpen: false });
+      
       if (data.success) {
-        alert('Product deleted successfully');
+        setMessageModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Product Deleted',
+          message: 'Product deleted successfully',
+        });
         fetchProducts();
+      } else {
+        setMessageModal({
+          isOpen: true,
+          type: 'error',
+          title: 'Deletion Failed',
+          message: data.error || 'Failed to delete product',
+        });
       }
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Failed to delete product');
+      setConfirmModal({ isOpen: false });
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to delete product',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -740,6 +817,33 @@ export default function ProductManagement({ merchantId }: Props) {
           }
         }
       `}</style>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Delete Product"
+        message={
+          <>
+            Delete <strong>{confirmModal.productName}</strong>?
+            <br />
+            <br />
+            This action cannot be undone.
+          </>
+        }
+        confirmText="✗ Delete"
+        confirmButtonClass="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false })}
+        isLoading={loading}
+      />
+
+      <MessageModal
+        isOpen={messageModal.isOpen}
+        type={messageModal.type}
+        title={messageModal.title}
+        message={messageModal.message}
+        onClose={() => setMessageModal({ isOpen: false, type: 'success', message: '' })}
+        autoCloseDuration={messageModal.type === 'success' ? 3000 : 4000}
+      />
     </div>
   );
 }

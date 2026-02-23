@@ -1,8 +1,8 @@
-import { FC, useEffect, useState, CSSProperties } from 'react';
+import { FC, useEffect, useState, CSSProperties, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useUserRole } from '../context/UserRoleContext';
+import WalletModal from '../components/WalletModal';
 
 /* ── colour tokens ── */
 const C = {
@@ -28,12 +28,24 @@ const absOverlay: CSSProperties = {
 };
 
 const HomePage: FC = () => {
-  const { connected, connecting, connect, select, publicKey } = useWallet();
-  const { setVisible } = useWalletModal();
+  const { connected, connecting, select, publicKey } = useWallet();
   const { role, loading: roleLoading } = useUserRole();
   const [vis, setVis] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [clickedConnect, setClickedConnect] = useState(false);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isConnecting = connecting || clickedConnect;
   
   useEffect(() => { setVis(true); }, []);
+
+  // Clear interim flag when actual connection starts or succeeds
+  useEffect(() => {
+    if (connecting || connected) {
+      setClickedConnect(false);
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+    }
+  }, [connecting, connected]);
 
   // Log connection state changes
   useEffect(() => {
@@ -46,18 +58,23 @@ const HomePage: FC = () => {
     });
   }, [connected, connecting, publicKey, role, roleLoading]);
 
-  // Handle wallet connection with explicit modal
+  // Handle wallet selection from modal
+  const handleWalletSelect = useCallback(
+    (walletName: string) => {
+      setShowWalletModal(false);
+      // @ts-ignore - WalletName is a branded string
+      select(walletName);
+      setClickedConnect(true);
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = setTimeout(() => setClickedConnect(false), 5000);
+    },
+    [select]
+  );
+
+  // Handle wallet connection
   const handleConnectWallet = () => {
     console.log('🔌 Opening wallet modal...');
-    try {
-      setVisible(true);
-    } catch (error) {
-      // Suppress Chrome extension messaging errors
-      const errorMsg = String(error);
-      if (!errorMsg.includes('message channel closed')) {
-        console.error('❌ Wallet connection error:', error);
-      }
-    }
+    setShowWalletModal(true);
   };
 
   // Role-specific dashboard link
@@ -188,7 +205,7 @@ const HomePage: FC = () => {
                 <>
                   <button
                     onClick={handleConnectWallet}
-                    disabled={connecting}
+                    disabled={isConnecting}
                     className="wallet-button-connect"
                     style={{
                       display: 'inline-flex',
@@ -203,13 +220,13 @@ const HomePage: FC = () => {
                       padding: '0 32px',
                       borderRadius: 14,
                       border: 'none',
-                      cursor: connecting ? 'not-allowed' : 'pointer',
+                      cursor: isConnecting ? 'not-allowed' : 'pointer',
                       boxShadow: `0 8px 32px rgba(20,241,149,0.25)`,
                       transition: 'all 0.25s',
-                      opacity: connecting ? 0.7 : 1,
+                      opacity: isConnecting ? 0.7 : 1,
                     }}
                   >
-                    {connecting ? (
+                    {isConnecting ? (
                       <>
                         <div style={{
                           width: 12,
@@ -436,6 +453,13 @@ const HomePage: FC = () => {
           cursor: not-allowed !important;
         }
       `}</style>
+
+      {/* Wallet selection modal */}
+      <WalletModal
+        open={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        onSelect={handleWalletSelect}
+      />
     </div>
   );
 };

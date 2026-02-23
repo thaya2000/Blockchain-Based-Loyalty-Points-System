@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import pool from '../db/index.js';
 import type { Merchant, ApproveMerchantRequest } from '../../../shared/types.js';
 import { requireAdmin, checkAdminStatus } from '../middleware/adminAuth.js';
+import { solanaService } from '../services/solana.service.js';
 
 const router = Router();
 
@@ -266,9 +267,20 @@ router.post('/merchants/:id/approve', requireAdmin, async (req: Request, res: Re
       updatedAt: new Date(row.updated_at),
     };
 
+    // Register merchant on-chain
+    let onChainSignature: string | null = null;
+    try {
+      onChainSignature = await solanaService.registerMerchantOnChain(row.wallet_address);
+      console.log(`✅ Merchant registered on-chain: ${onChainSignature}`);
+    } catch (onChainError: any) {
+      // Log but don't fail — DB is already approved, on-chain can be retried
+      console.error('⚠️ On-chain registration failed (DB still approved):', onChainError.message);
+    }
+
     res.json({
       success: true,
       data: updatedMerchant,
+      onChainSignature,
       message: `Merchant "${updatedMerchant.businessName}" approved successfully`,
     });
   } catch (error) {
