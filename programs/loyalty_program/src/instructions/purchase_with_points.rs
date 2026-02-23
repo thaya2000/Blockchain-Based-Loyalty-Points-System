@@ -100,7 +100,7 @@ pub fn handler(
         points_amount,
     )?;
 
-    msg!("Burned {} loyalty points from customer", points_amount);
+    msg!("Burned {} loyalty points from customer", points_amount / 1_000_000);
 
     // STEP 2: Record the purchase
     let purchase_record = &mut ctx.accounts.purchase_record;

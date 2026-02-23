@@ -145,7 +145,7 @@ pub fn handler(
         ctx.accounts.merchant.key(),
         sol_amount,
         sol_amount as f64 / 1_000_000_000.0,
-        points_amount
+        points_amount / 1_000_000
     );
 
     emit!(SolDeposited {

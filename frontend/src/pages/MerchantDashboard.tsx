@@ -5,6 +5,7 @@ import { useConnection } from '@solana/wallet-adapter-react';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useUserRole } from '../context/UserRoleContext';
 import ProductManagement from '../components/ProductManagement';
+import MessageModal from '../components/MessageModal';
 
 interface MerchantInfo {
   id: string;
@@ -16,7 +17,9 @@ interface MerchantInfo {
   onChainAuthorized?: boolean;
 }
 
-const SOL_TO_POINTS_RATIO = 100;
+// Loyalty Point decimal scale (6 decimals, like SOL's lamports)
+const LP_SCALE = 1_000_000;
+const SOL_TO_POINTS_RATIO = 100; // 1 SOL = 100 LP
 
 const MerchantDashboard: FC = () => {
   const { publicKey, connected, sendTransaction } = useWallet();
@@ -28,7 +31,12 @@ const MerchantDashboard: FC = () => {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositLoading, setDepositLoading] = useState(false);
-  const [depositMessage, setDepositMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [messageModal, setMessageModal] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'info';
+    title?: string;
+    message: string;
+  }>({ isOpen: false, type: 'success', message: '' });
   const [loyaltyBalance, setLoyaltyBalance] = useState<number>(0);
   const [showProductForm, setShowProductForm] = useState(false);
 
@@ -63,6 +71,8 @@ const MerchantDashboard: FC = () => {
         const merchantTokenAccount = await getAssociatedTokenAddress(tokenMintPDA, publicKey);
         const tokenAccountInfo = await connection.getTokenAccountBalance(merchantTokenAccount);
         if (tokenAccountInfo?.value) {
+          // uiAmount automatically divides by token decimals (6)
+          // On-chain: 500,000,000 smallest units → Display: 500 LP
           setLoyaltyBalance(tokenAccountInfo.value.uiAmount || 0);
         }
       } catch (error: any) {
@@ -97,14 +107,23 @@ const MerchantDashboard: FC = () => {
 
   const handleDepositSol = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDepositMessage(null);
 
     if (!publicKey || !depositAmount || parseFloat(depositAmount) <= 0) {
-      setDepositMessage({ type: 'error', text: 'Please enter a valid SOL amount.' });
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Invalid Amount',
+        message: 'Please enter a valid SOL amount.',
+      });
       return;
     }
     if (parseFloat(depositAmount) > walletBalance) {
-      setDepositMessage({ type: 'error', text: `Insufficient balance. You have ${walletBalance.toFixed(4)} SOL.` });
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Insufficient Balance',
+        message: `You have ${walletBalance.toFixed(4)} SOL available.`,
+      });
       return;
     }
 
@@ -151,16 +170,23 @@ const MerchantDashboard: FC = () => {
 
       const pointsReceived = parseFloat(depositAmount) * SOL_TO_POINTS_RATIO;
       setLoyaltyBalance((prev) => prev + pointsReceived);
-      setDepositMessage({
+      setMessageModal({
+        isOpen: true,
         type: 'success',
-        text: `✅ Deposited ${depositAmount} SOL — received ${pointsReceived.toLocaleString()} LP | Tx: ${signature.slice(0, 20)}...`,
+        title: 'Deposit Successful',
+        message: `Deposited ${depositAmount} SOL\n\nReceived ${pointsReceived.toLocaleString()} LP\n\nTx: ${signature.slice(0, 16)}...${signature.slice(-8)}`,
       });
       setDepositAmount('');
 
       const balance = await connection.getBalance(publicKey);
       setWalletBalance(balance / LAMPORTS_PER_SOL);
     } catch (error: any) {
-      setDepositMessage({ type: 'error', text: `Deposit failed: ${error.message || 'Unknown error'}` });
+      setMessageModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Deposit Failed',
+        message: error.message || 'An unexpected error occurred during the deposit.',
+      });
     } finally {
       setDepositLoading(false);
     }
@@ -262,23 +288,6 @@ const MerchantDashboard: FC = () => {
           <p style={{ margin: '0 0 24px', color: '#94a3b8', fontSize: '0.88rem', lineHeight: 1.6 }}>
             Convert SOL into LP tokens to distribute as customer rewards across the entire platform.
           </p>
-
-          {depositMessage && (
-            <div style={{
-              padding: '12px 16px',
-              borderRadius: '10px',
-              marginBottom: '20px',
-              fontSize: '0.88rem',
-              fontWeight: 500,
-              background: depositMessage.type === 'success'
-                ? 'rgba(16,185,129,0.15)'
-                : 'rgba(239,68,68,0.15)',
-              border: `1px solid ${depositMessage.type === 'success' ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
-              color: depositMessage.type === 'success' ? '#6ee7b7' : '#fca5a5',
-            }}>
-              {depositMessage.text}
-            </div>
-          )}
 
           <form onSubmit={handleDepositSol}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr auto', gap: '16px', alignItems: 'end' }}>
@@ -407,6 +416,15 @@ const MerchantDashboard: FC = () => {
         </div>
 
       </div>
+
+      <MessageModal
+        isOpen={messageModal.isOpen}
+        type={messageModal.type}
+        title={messageModal.title}
+        message={messageModal.message}
+        onClose={() => setMessageModal({ isOpen: false, type: 'success', message: '' })}
+        autoCloseDuration={messageModal.type === 'success' ? 3000 : 4000}
+      />
     </div>
   );
 };

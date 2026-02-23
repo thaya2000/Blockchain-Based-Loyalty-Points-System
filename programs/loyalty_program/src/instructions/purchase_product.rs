@@ -187,7 +187,7 @@ pub fn handler(
         ctx.accounts.merchant.key(),
         &product_id_hash[..8],
         price_sol,
-        loyalty_points_reward
+        loyalty_points_reward / 1_000_000
     );
 
     emit!(ProductPurchased {

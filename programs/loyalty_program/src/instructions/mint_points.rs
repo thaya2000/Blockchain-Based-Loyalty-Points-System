@@ -87,7 +87,7 @@ pub fn handler(
         .ok_or(LoyaltyError::ArithmeticOverflow)?;
 
     msg!("Protocol fee calculation: base={}, rate={}, points={}, total_fee={}",
-        base_fee, rate, amount, total_fee);
+        base_fee, rate, amount / 1_000_000, total_fee);
 
     // ATOMIC STEP 1: Transfer protocol fee from merchant to treasury
     anchor_lang::solana_program::program::invoke(
@@ -167,7 +167,7 @@ pub fn handler(
 
     msg!(
         "Minted {} points to consumer {} by merchant {}",
-        amount,
+        amount / 1_000_000,
         ctx.accounts.consumer.key(),
         ctx.accounts.merchant.key()
     );
