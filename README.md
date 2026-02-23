@@ -206,14 +206,14 @@ blockchain-loyalty/
 
 | Instruction | Access | Description |
 |-------------|--------|-------------|
-| `initialize_platform` | Admin | Bootstrap platform, create SPL token mint |
-| `register_merchant` | Admin | Authorize a new merchant |
-| `revoke_merchant` | Admin | Revoke merchant authorization |
-| `mint_points` | Merchant | Mint loyalty points to a consumer |
-| `purchase_product_with_sol` | Consumer | Buy product with SOL, earn points |
-| `purchase_product_with_points` | Consumer | Buy product by burning points |
-| `redeem_points` | Consumer | Redeem points at a merchant |
-| `deposit_sol` | Merchant | Deposit SOL to receive points |
+| [`initialize_platform`](programs/loyalty_program/src/instructions/initialize.rs) | Admin | Bootstrap platform, create SPL token mint |
+| [`register_merchant`](programs/loyalty_program/src/instructions/register_merchant.rs) | Admin | Authorize a new merchant |
+| [`revoke_merchant`](programs/loyalty_program/src/instructions/revoke_merchant.rs) | Admin | Revoke merchant authorization |
+| [`mint_points`](programs/loyalty_program/src/instructions/mint_points.rs) | Merchant | Mint loyalty points to a consumer |
+| [`purchase_product_with_sol`](programs/loyalty_program/src/instructions/purchase_product.rs) | Consumer | Buy product with SOL, earn points |
+| [`purchase_product_with_points`](programs/loyalty_program/src/instructions/purchase_with_points.rs) | Consumer | Buy product by burning points |
+| [`redeem_points`](programs/loyalty_program/src/instructions/redeem_points.rs) | Consumer | Redeem points at a merchant |
+| [`deposit_sol`](programs/loyalty_program/src/instructions/deposit_sol.rs) | Merchant | Deposit SOL to receive points |
 
 ---
 
