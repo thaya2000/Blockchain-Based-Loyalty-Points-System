@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { loyaltyService } from '../services/loyalty.service.js';
-import { solanaService } from '../services/solana.service.js';
+import { ethereumService } from '../services/ethereum.service.js';
 
 const router = Router();
 
@@ -63,7 +63,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.get('/:wallet/balance', async (req: Request, res: Response) => {
   try {
     const { wallet } = req.params;
-    const balance = await solanaService.getBalance(wallet);
+    const balance = await ethereumService.getBalance(wallet);
 
     res.json({
       success: true,

@@ -1,5 +1,5 @@
 import pool from '../db/index.js';
-import { solanaService } from './solana.service.js';
+import { ethereumService } from './ethereum.service.js';
 import type { User, Merchant, Reward, TransactionLog } from '../../../shared/types.js';
 
 export class LoyaltyService {
@@ -29,7 +29,7 @@ export class LoyaltyService {
   }
 
   async getUserBalance(walletAddress: string): Promise<number> {
-    return solanaService.getBalance(walletAddress);
+    return ethereumService.getBalance(walletAddress);
   }
 
   // ============================================

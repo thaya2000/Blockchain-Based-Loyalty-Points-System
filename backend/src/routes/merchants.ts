@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { loyaltyService } from '../services/loyalty.service.js';
-import { solanaService } from '../services/solana.service.js';
+import { ethereumService } from '../services/ethereum.service.js';
 
 const router = Router();
 
@@ -40,7 +40,7 @@ router.get('/:wallet', async (req: Request, res: Response) => {
     }
 
     // Check on-chain authorization status
-    const isAuthorized = await solanaService.isMerchantAuthorized(wallet);
+    const isAuthorized = await ethereumService.isMerchantAuthorized(wallet);
 
     res.json({
       success: true,

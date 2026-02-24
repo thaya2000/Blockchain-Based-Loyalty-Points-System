@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { loyaltyService } from '../services/loyalty.service.js';
-import { solanaService } from '../services/solana.service.js';
+import { ethereumService } from '../services/ethereum.service.js';
 
 const router = Router();
 
@@ -20,7 +20,7 @@ router.post('/log-mint', async (req: Request, res: Response) => {
     }
 
     // Verify transaction exists on-chain
-    const tx = await solanaService.getTransaction(txSignature);
+    const tx = await ethereumService.getTransaction(txSignature);
     if (!tx) {
       return res.status(400).json({
         success: false,
@@ -61,7 +61,7 @@ router.post('/log-redeem', async (req: Request, res: Response) => {
     }
 
     // Verify transaction exists on-chain
-    const tx = await solanaService.getTransaction(txSignature);
+    const tx = await ethereumService.getTransaction(txSignature);
     if (!tx) {
       return res.status(400).json({
         success: false,
@@ -94,15 +94,15 @@ router.get('/:signature', async (req: Request, res: Response) => {
     const { signature } = req.params;
 
     // Get on-chain transaction details
-    const onChainTx = await solanaService.getTransaction(signature);
+    const onChainTx = await ethereumService.getTransaction(signature);
 
     res.json({
       success: true,
       data: {
         signature,
-        slot: onChainTx?.slot,
-        blockTime: onChainTx?.blockTime,
-        err: onChainTx?.meta?.err,
+        blockNumber: onChainTx?.blockNumber,
+        timestamp: onChainTx?.timestamp,
+        status: onChainTx?.status,
       },
     });
   } catch (error) {

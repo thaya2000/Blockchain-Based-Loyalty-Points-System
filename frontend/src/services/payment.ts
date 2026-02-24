@@ -1,439 +1,274 @@
-import {
-  Connection,
-  PublicKey,
-  Transaction,
-  SystemProgram,
-  LAMPORTS_PER_SOL,
-} from '@solana/web3.js';
-import { AnchorProvider, Program, web3, BN } from '@project-serum/anchor';
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
+import { BrowserProvider, Contract } from 'ethers';
+import { getPlatformContract, getTokenContract, hashProductId, calculateMintFee } from './ethereum';
+import { ethers } from 'ethers';
 
-// Lazy initialization of PublicKeys to avoid errors on missing env vars
-let PROGRAM_ID: PublicKey | null = null;
-let PLATFORM_AUTHORITY: PublicKey | null = null;
-
-function getProgramId(): PublicKey {
-  if (!PROGRAM_ID) {
-    const programIdStr = import.meta.env.VITE_PROGRAM_ID;
-    if (!programIdStr) {
-      throw new Error('VITE_PROGRAM_ID environment variable is not set');
-    }
-    PROGRAM_ID = new PublicKey(programIdStr);
-  }
-  return PROGRAM_ID;
-}
-
-function getPlatformAuthority(): PublicKey {
-  if (!PLATFORM_AUTHORITY) {
-    const authorityStr = import.meta.env.VITE_PLATFORM_AUTHORITY;
-    if (!authorityStr) {
-      console.warn('VITE_PLATFORM_AUTHORITY not set, using PROGRAM_ID as fallback');
-      PLATFORM_AUTHORITY = getProgramId();
-    } else {
-      PLATFORM_AUTHORITY = new PublicKey(authorityStr);
-    }
-  }
-  return PLATFORM_AUTHORITY;
-}
-
-// ============================================
-// PDA Derivation Helpers
-// ============================================
-
-function derivePlatformStatePDA(): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from('platform_state')],
-    getProgramId()
-  );
-}
-
-function deriveTokenMintPDA(): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from('loyalty_mint')],
-    getProgramId()
-  );
-}
-
-function deriveMerchantRecordPDA(merchantWallet: PublicKey): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from('merchant'), merchantWallet.toBuffer()],
-    getProgramId()
-  );
-}
-
-function derivePurchaseRecordPDA(customerWallet: PublicKey, productIdHash: Buffer): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('purchase'),
-      customerWallet.toBuffer(),
-      productIdHash,
-    ],
-    getProgramId()
-  );
-}
-
-async function hashProductId(productId: string): Promise<Buffer> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(productId);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data as unknown as BufferSource);
-  return Buffer.from(hashBuffer);
-}
-
-// ============================================
-// Interfaces
-// ============================================
-
-export interface PurchaseWithSOLParams {
-  connection: Connection;
+export interface PurchaseWithETHParams {
   wallet: any;
   merchantWallet: string;
   productId: string;
-  priceSol: number; // in lamports
-  loyaltyPointsReward: number;
+  priceETH: string;
+  loyaltyPointsReward: string;
 }
 
 export interface PurchaseWithPointsParams {
-  connection: Connection;
   wallet: any;
   merchantWallet: string;
   productId: string;
-  pointsAmount: number;
+  pointsAmount: string;
 }
 
-export interface DepositSolParams {
-  connection: Connection;
+export interface MintPointsParams {
   wallet: any;
-  solAmount: number; // in lamports
+  consumerWallet: string;
+  amount: string;
+  purchaseReference: string;
 }
 
 export interface RedeemPointsParams {
-  connection: Connection;
   wallet: any;
   merchantWallet: string;
-  productId: string;
-  pointsAmount: number;
+  amount: string;
+  rewardId: string;
 }
 
-// ============================================
-// Merchant: Deposit SOL to get Loyalty Points
-// ============================================
-
 /**
- * Merchant deposits SOL to the protocol treasury and receives loyalty points
- * at the platform's configured ratio (e.g. 1 SOL = 100 LP)
+ * Purchase product with ETH and earn loyalty points
  */
-export async function depositSol(params: DepositSolParams): Promise<string> {
-  const { connection, wallet, solAmount } = params;
-
-  if (!wallet.publicKey) {
-    throw new Error('Wallet not connected');
-  }
+export async function purchaseProductWithETH(params: PurchaseWithETHParams): Promise<string> {
+  const { wallet, merchantWallet, productId, priceETH, loyaltyPointsReward } = params;
 
   try {
-    const programId = getProgramId();
-    const [platformState] = derivePlatformStatePDA();
-    const [tokenMint] = deriveTokenMintPDA();
-    const merchantPubkey = wallet.publicKey;
-    const [merchantRecord] = deriveMerchantRecordPDA(merchantPubkey);
+    const provider = new BrowserProvider(wallet);
+    const signer = await provider.getSigner();
+    const platform = await getPlatformContract(signer);
 
-    // Get merchant's token account
-    const merchantTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      merchantPubkey
+    // Hash product ID
+    const productIdHash = hashProductId(productId);
+    
+    // Convert values
+    const priceWei = ethers.parseEther(priceETH);
+    const pointsWei = ethers.parseEther(loyaltyPointsReward);
+
+    // Execute transaction
+    const tx = await platform.purchaseProductWithETH(
+      merchantWallet,
+      productIdHash,
+      pointsWei,
+      { value: priceWei }
     );
 
-    // Get protocol treasury from platform state
-    const protocolTreasury = getPlatformAuthority();
+    console.log('Transaction sent:', tx.hash);
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash);
 
-    // Build transaction
-    const transaction = new Transaction();
-
-    // Check if merchant token account exists, create if not
-    const accountInfo = await connection.getAccountInfo(merchantTokenAccount);
-    if (!accountInfo) {
-      transaction.add(
-        createAssociatedTokenAccountInstruction(
-          merchantPubkey,
-          merchantTokenAccount,
-          merchantPubkey,
-          tokenMint
-        )
-      );
-    }
-
-    // SOL transfer to treasury + loyalty points minting happens on-chain 
-    // via the deposit_sol instruction
-    // For now, simulated - replace with Anchor IDL client in production
-    const signature = 'deposit_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-
-    console.log('Deposit SOL transaction:', {
-      merchant: merchantPubkey.toBase58(),
-      solAmount,
-      solAmountInSOL: solAmount / LAMPORTS_PER_SOL,
-      signature,
-    });
-
-    return signature;
-  } catch (error) {
-    console.error('Error depositing SOL:', error);
-    throw error;
+    return receipt.hash;
+  } catch (error: any) {
+    console.error('Error purchasing with ETH:', error);
+    throw new Error(error.message || 'Failed to purchase product with ETH');
   }
 }
 
-// ============================================
-// Consumer: Purchase product with SOL
-// ============================================
-
 /**
- * Purchase a product with SOL and earn loyalty points
- * Calls the purchase_product_with_sol instruction on-chain
- */
-export async function purchaseProductWithSOL(params: PurchaseWithSOLParams): Promise<string> {
-  const {
-    connection,
-    wallet,
-    merchantWallet,
-    productId,
-    priceSol,
-    loyaltyPointsReward,
-  } = params;
-
-  if (!wallet.publicKey) {
-    throw new Error('Wallet not connected');
-  }
-
-  try {
-    const programId = getProgramId();
-    const [platformState] = derivePlatformStatePDA();
-    const [tokenMint] = deriveTokenMintPDA();
-
-    const merchantPubkey = new PublicKey(merchantWallet);
-    const [merchantRecord] = deriveMerchantRecordPDA(merchantPubkey);
-
-    // Get customer's token account
-    const customerTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      wallet.publicKey
-    );
-
-    // Create product ID hash and derive purchase record PDA
-    const productIdHash = await hashProductId(productId);
-    const [purchaseRecord] = derivePurchaseRecordPDA(wallet.publicKey, productIdHash);
-
-    // Get protocol treasury
-    const protocolTreasury = getPlatformAuthority();
-
-    // Build transaction
-    const transaction = new Transaction();
-
-    // Check if customer token account exists, create if not
-    const accountInfo = await connection.getAccountInfo(customerTokenAccount);
-    if (!accountInfo) {
-      transaction.add(
-        createAssociatedTokenAccountInstruction(
-          wallet.publicKey,
-          customerTokenAccount,
-          wallet.publicKey,
-          tokenMint
-        )
-      );
-    }
-
-    // For now, return a simulated transaction signature
-    // In production, use the generated Anchor client
-    const signature = 'purchase_sol_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-
-    console.log('Purchase with SOL transaction:', {
-      customer: wallet.publicKey.toBase58(),
-      merchant: merchantWallet,
-      productId,
-      priceSol,
-      loyaltyPointsReward,
-      signature,
-    });
-
-    return signature;
-  } catch (error) {
-    console.error('Error purchasing with SOL:', error);
-    throw error;
-  }
-}
-
-// ============================================
-// Consumer: Purchase product with Loyalty Points
-// ============================================
-
-/**
- * Purchase a product by burning loyalty points
- * Calls the purchase_product_with_points instruction on-chain
+ * Purchase product with loyalty points
  */
 export async function purchaseProductWithPoints(params: PurchaseWithPointsParams): Promise<string> {
-  const {
-    connection,
-    wallet,
-    merchantWallet,
-    productId,
-    pointsAmount,
-  } = params;
-
-  if (!wallet.publicKey) {
-    throw new Error('Wallet not connected');
-  }
+  const { wallet, merchantWallet, productId, pointsAmount } = params;
 
   try {
-    const programId = getProgramId();
-    const [platformState] = derivePlatformStatePDA();
-    const [tokenMint] = deriveTokenMintPDA();
+    const provider = new BrowserProvider(wallet);
+    const signer = await provider.getSigner();
+    const platform = await getPlatformContract(signer);
 
-    const merchantPubkey = new PublicKey(merchantWallet);
-    const [merchantRecord] = deriveMerchantRecordPDA(merchantPubkey);
+    // Hash product ID
+    const productIdHash = hashProductId(productId);
+    
+    // Convert points to wei
+    const pointsWei = ethers.parseEther(pointsAmount);
 
-    // Get customer's token account
-    const customerTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      wallet.publicKey
+    // Execute transaction
+    const tx = await platform.purchaseProductWithPoints(
+      merchantWallet,
+      productIdHash,
+      pointsWei
     );
 
-    // Create product ID hash and derive purchase record PDA
-    const productIdHash = await hashProductId(productId);
-    const [purchaseRecord] = derivePurchaseRecordPDA(wallet.publicKey, productIdHash);
+    console.log('Transaction sent:', tx.hash);
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash);
 
-    // For now, return a simulated transaction signature
-    // In production, use the generated Anchor client:
-    /*
-    const productIdArray = Array.from(productIdHash);
-    const ix = await program.methods
-      .purchaseProductWithPoints(productIdArray, new BN(pointsAmount))
-      .accounts({
-        customer: wallet.publicKey,
-        merchant: merchantPubkey,
-        platformState,
-        merchantRecord,
-        purchaseRecord,
-        tokenMint,
-        customerTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-      })
-      .instruction();
-    transaction.add(ix);
-    */
-
-    const signature = 'purchase_points_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-
-    console.log('Purchase with loyalty points transaction:', {
-      customer: wallet.publicKey.toBase58(),
-      merchant: merchantWallet,
-      productId,
-      pointsAmount,
-      signature,
-    });
-
-    return signature;
-  } catch (error) {
+    return receipt.hash;
+  } catch (error: any) {
     console.error('Error purchasing with points:', error);
-    throw error;
+    throw new Error(error.message || 'Failed to purchase product with points');
   }
 }
 
-// ============================================
-// Consumer: Redeem loyalty points at merchant
-// ============================================
-
 /**
- * Redeem loyalty points for a reward at a merchant
- * This calls the redeem_points instruction on-chain
+ * Mint loyalty points to a consumer (merchant only)
  */
-export async function redeemLoyaltyPoints(params: RedeemPointsParams): Promise<string> {
-  const {
-    connection,
-    wallet,
-    merchantWallet,
-    productId,
-    pointsAmount,
-  } = params;
-
-  if (!wallet.publicKey) {
-    throw new Error('Wallet not connected');
-  }
+export async function mintPointsToConsumer(params: MintPointsParams): Promise<string> {
+  const { wallet, consumerWallet, amount, purchaseReference } = params;
 
   try {
-    const programId = getProgramId();
-    const [platformState] = derivePlatformStatePDA();
-    const [tokenMint] = deriveTokenMintPDA();
+    const provider = new BrowserProvider(wallet);
+    const signer = await provider.getSigner();
+    const platform = await getPlatformContract(signer);
 
-    const merchantPubkey = new PublicKey(merchantWallet);
-    const [merchantRecord] = deriveMerchantRecordPDA(merchantPubkey);
+    // Calculate required fee
+    const fee = await calculateMintFee(amount);
+    const feeWei = ethers.parseEther(fee);
+    
+    // Convert points to wei
+    const amountWei = ethers.parseEther(amount);
 
-    const customerTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      wallet.publicKey
+    // Execute transaction
+    const tx = await platform.mintPoints(
+      consumerWallet,
+      amountWei,
+      purchaseReference,
+      { value: feeWei }
     );
 
-    const merchantTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      merchantPubkey
+    console.log('Transaction sent:', tx.hash);
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash);
+
+    return receipt.hash;
+  } catch (error: any) {
+    console.error('Error minting points:', error);
+    throw new Error(error.message || 'Failed to mint loyalty points');
+  }
+}
+
+/**
+ * Redeem loyalty points at a merchant
+ */
+export async function redeemPoints(params: RedeemPointsParams): Promise<string> {
+  const { wallet, merchantWallet, amount, rewardId } = params;
+
+  try {
+    const provider = new BrowserProvider(wallet);
+    const signer = await provider.getSigner();
+    const platform = await getPlatformContract(signer);
+
+    // Convert points to wei
+    const amountWei = ethers.parseEther(amount);
+
+    // Execute transaction
+    const tx = await platform.redeemPoints(
+      merchantWallet,
+      amountWei,
+      rewardId
     );
 
-    // Simulated signature
-    const signature = 'redeem_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    console.log('Transaction sent:', tx.hash);
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash);
 
-    console.log('Redeem points transaction:', {
-      customer: wallet.publicKey.toBase58(),
-      merchant: merchantWallet,
-      productId,
-      pointsAmount,
-      signature,
-    });
-
-    return signature;
-  } catch (error) {
+    return receipt.hash;
+  } catch (error: any) {
     console.error('Error redeeming points:', error);
-    throw error;
+    throw new Error(error.message || 'Failed to redeem points');
   }
 }
 
-// ============================================
-// Utility: Get loyalty point balance
-// ============================================
-
 /**
- * Get customer's loyalty point balance
+ * Merchant deposits ETH to receive loyalty points
  */
-export async function getLoyaltyPointBalance(
-  connection: Connection,
-  customerWallet: PublicKey
-): Promise<number> {
+export async function depositETH(wallet: any, amountETH: string): Promise<string> {
   try {
-    const [tokenMint] = deriveTokenMintPDA();
+    const provider = new BrowserProvider(wallet);
+    const signer = await provider.getSigner();
+    const platform = await getPlatformContract(signer);
 
-    const customerTokenAccount = await getAssociatedTokenAddress(
-      tokenMint,
-      customerWallet
-    );
+    const amountWei = ethers.parseEther(amountETH);
 
-    const accountInfo = await connection.getAccountInfo(customerTokenAccount);
-    if (!accountInfo) {
-      return 0;
-    }
+    const tx = await platform.depositETH({ value: amountWei });
 
-    // Parse token account data to get balance
-    // This is simplified - actual implementation would use token account layout
-    return 0; // Placeholder
-  } catch (error) {
-    console.error('Error getting loyalty point balance:', error);
-    return 0;
+    console.log('Transaction sent:', tx.hash);
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash);
+
+    return receipt.hash;
+  } catch (error: any) {
+    console.error('Error depositing ETH:', error);
+    throw new Error(error.message || 'Failed to deposit ETH');
   }
 }
 
 /**
- * Check if customer has enough loyalty points
+ * Register a new merchant (admin only)
  */
-export async function hasEnoughPoints(
-  connection: Connection,
-  customerWallet: PublicKey,
-  requiredPoints: number
-): Promise<boolean> {
-  const balance = await getLoyaltyPointBalance(connection, customerWallet);
-  return balance >= requiredPoints;
+export async function registerMerchant(
+  wallet: any,
+  merchantAddress: string,
+  mintAllowance: string
+): Promise<string> {
+  try {
+    const provider = new BrowserProvider(wallet);
+    const signer = await provider.getSigner();
+    const platform = await getPlatformContract(signer);
+
+    const allowanceWei = ethers.parseEther(mintAllowance);
+
+    const tx = await platform.registerMerchant(merchantAddress, allowanceWei);
+
+    console.log('Transaction sent:', tx.hash);
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash);
+
+    return receipt.hash;
+  } catch (error: any) {
+    console.error('Error registering merchant:', error);
+    throw new Error(error.message || 'Failed to register merchant');
+  }
+}
+
+/**
+ * Revoke merchant authorization (admin only)
+ */
+export async function revokeMerchant(wallet: any, merchantAddress: string): Promise<string> {
+  try {
+    const provider = new BrowserProvider(wallet);
+    const signer = await provider.getSigner();
+    const platform = await getPlatformContract(signer);
+
+    const tx = await platform.revokeMerchant(merchantAddress);
+
+    console.log('Transaction sent:', tx.hash);
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash);
+
+    return receipt.hash;
+  } catch (error: any) {
+    console.error('Error revoking merchant:', error);
+    throw new Error(error.message || 'Failed to revoke merchant');
+  }
+}
+
+/**
+ * Listen to platform events
+ */
+export async function subscribeToEvents(
+  eventName: string,
+  callback: (...args: any[]) => void
+): Promise<void> {
+  try {
+    const platform = await getPlatformContract();
+    platform.on(eventName, callback);
+  } catch (error) {
+    console.error(`Error subscribing to ${eventName}:`, error);
+  }
+}
+
+/**
+ * Unsubscribe from platform events
+ */
+export async function unsubscribeFromEvents(eventName: string): Promise<void> {
+  try {
+    const platform = await getPlatformContract();
+    platform.removeAllListeners(eventName);
+  } catch (error) {
+    console.error(`Error unsubscribing from ${eventName}:`, error);
+  }
 }

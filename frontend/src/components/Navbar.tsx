@@ -1,23 +1,22 @@
-import { FC, useState, useCallback, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useUserRole } from '../context/UserRoleContext';
-import MerchantRegisterModal from './MerchantRegisterModal';
-import WalletModal from './WalletModal';
+import { FC, useState, useCallback, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAccount, useDisconnect } from "wagmi";
+import { useUserRole } from "../context/UserRoleContext";
+import MerchantRegisterModal from "./MerchantRegisterModal";
+import WalletModal from "./WalletModal";
 
 const Navbar: FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { role, loading, merchantInfo } = useUserRole();
-  const { connected, connecting, publicKey, disconnect, select } = useWallet();
+  const { address, isConnected, isConnecting } = useAccount();
+  const { disconnect } = useDisconnect();
   const [showRegister, setShowRegister] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
-  // clickedConnect covers the brief gap between user clicking and Wallet Standard
-  // setting connecting=true. Cleared when connected or connecting changes.
   const [clickedConnect, setClickedConnect] = useState(false);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isConnecting = connecting || clickedConnect;
+  const connecting = isConnecting || clickedConnect;
 
   // Once the wallet actually starts connecting or connects, clear our interim flag
   useEffect(() => {
@@ -41,16 +40,19 @@ const Navbar: FC = () => {
       setClickedConnect(true);
       // Safety timeout: reset flag if wallet never connects in 5s
       if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = setTimeout(() => setClickedConnect(false), 5000);
+      clickTimeoutRef.current = setTimeout(
+        () => setClickedConnect(false),
+        5000,
+      );
     },
-    [select]
+    [select],
   );
 
   const isActive = (path: string) => location.pathname === path;
 
   const shortAddress = publicKey
     ? `${publicKey.toBase58().slice(0, 4)}…${publicKey.toBase58().slice(-4)}`
-    : '';
+    : "";
 
   return (
     <>
@@ -63,53 +65,57 @@ const Navbar: FC = () => {
         <div className="navbar-links">
           <Link
             to="/"
-            className={`navbar-link ${isActive('/') ? 'active' : ''}`}
+            className={`navbar-link ${isActive("/") ? "active" : ""}`}
           >
             Home
           </Link>
 
           {/* Shop - visible to consumers and admins only, not merchants */}
-          {role !== 'merchant' && (
+          {role !== "merchant" && (
             <Link
               to="/marketplace"
-              className={`navbar-link ${isActive('/marketplace') ? 'active' : ''}`}
+              className={`navbar-link ${
+                isActive("/marketplace") ? "active" : ""
+              }`}
             >
               🛒 Shop
             </Link>
           )}
 
           {/* Consumer-only links */}
-          {role === 'consumer' && (
+          {role === "consumer" && (
             <Link
               to="/dashboard"
-              className={`navbar-link ${isActive('/dashboard') ? 'active' : ''}`}
+              className={`navbar-link ${
+                isActive("/dashboard") ? "active" : ""
+              }`}
             >
               My Points
             </Link>
           )}
 
           {/* Merchant-only link */}
-          {role === 'merchant' && (
+          {role === "merchant" && (
             <Link
               to="/merchant"
-              className={`navbar-link ${isActive('/merchant') ? 'active' : ''}`}
+              className={`navbar-link ${isActive("/merchant") ? "active" : ""}`}
             >
               🏪 Merchant
             </Link>
           )}
 
           {/* Admin-only link */}
-          {role === 'admin' && (
+          {role === "admin" && (
             <Link
               to="/admin"
-              className={`navbar-link ${isActive('/admin') ? 'active' : ''}`}
+              className={`navbar-link ${isActive("/admin") ? "active" : ""}`}
             >
               🛡️ Admin
             </Link>
           )}
 
           {/* Become a Merchant — visible only to consumers */}
-          {role === 'consumer' && !merchantInfo && (
+          {role === "consumer" && !merchantInfo && (
             <button
               className="become-merchant-btn"
               onClick={() => setShowRegister(true)}
@@ -120,22 +126,31 @@ const Navbar: FC = () => {
           )}
 
           {/* Show status if merchant application exists but not approved */}
-          {role === 'consumer' && merchantInfo && (
+          {role === "consumer" && merchantInfo && (
             <div className="merchant-status-badge">
               <span className="status-icon">
-                {merchantInfo.status === 'pending' ? '⏳' : merchantInfo.status === 'rejected' ? '❌' : '📋'}
+                {merchantInfo.status === "pending"
+                  ? "⏳"
+                  : merchantInfo.status === "rejected"
+                  ? "❌"
+                  : "📋"}
               </span>
               <span className="status-text">
-                {merchantInfo.status === 'pending' ? 'Application Pending' : 
-                 merchantInfo.status === 'rejected' ? 'Application Rejected' : 
-                 `Application ${merchantInfo.status}`}
+                {merchantInfo.status === "pending"
+                  ? "Application Pending"
+                  : merchantInfo.status === "rejected"
+                  ? "Application Rejected"
+                  : `Application ${merchantInfo.status}`}
               </span>
             </div>
           )}
 
           {/* Loading indicator */}
           {loading && (
-            <span className="navbar-link" style={{ opacity: 0.5, cursor: 'default' }}>
+            <span
+              className="navbar-link"
+              style={{ opacity: 0.5, cursor: "default" }}
+            >
               ⏳
             </span>
           )}
@@ -148,21 +163,28 @@ const Navbar: FC = () => {
               <span className="nb-dot" />
               {shortAddress}
             </div>
-            <button className="nb-disconnect" onClick={() => {
-              disconnect();
-              navigate('/');
-            }}>
+            <button
+              className="nb-disconnect"
+              onClick={() => {
+                disconnect();
+                navigate("/");
+              }}
+            >
               Disconnect
             </button>
           </div>
         ) : (
           <button
-            className={`nb-connect-btn${isConnecting ? ' nb-connect-btn--loading' : ''}`}
+            className={`nb-connect-btn${
+              isConnecting ? " nb-connect-btn--loading" : ""
+            }`}
             onClick={() => !isConnecting && setShowWalletModal(true)}
             disabled={isConnecting}
           >
-            <span className="nb-connect-icon">{isConnecting ? '⏳' : '⚡'}</span>
-            {isConnecting ? 'Connecting…' : 'Connect Wallet'}
+            <span className="nb-connect-icon">
+              {isConnecting ? "⏳" : "⚡"}
+            </span>
+            {isConnecting ? "Connecting…" : "Connect Wallet"}
           </button>
         )}
       </nav>

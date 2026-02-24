@@ -98,19 +98,19 @@ app.use('/api/admin', adminRouter);
 // Platform info endpoint
 app.get('/api/platform', async (_req: Request, res: Response) => {
   try {
-    const { solanaService } = await import('./services/solana.service.js');
+    const { ethereumService } = await import('./services/ethereum.service.js');
     
-    const [platformPDA] = solanaService.getPlatformStatePDA();
-    const [mintPDA] = solanaService.getLoyaltyMintPDA();
+    const platformAddress = ethereumService.getPlatformAddress();
+    const tokenAddress = ethereumService.getTokenAddress();
 
     res.json({
       success: true,
       data: {
-        programId: process.env.PROGRAM_ID,
-        platformStatePDA: platformPDA.toBase58(),
-        tokenMintPDA: mintPDA.toBase58(),
-        network: 'devnet',
-        rpcUrl: process.env.SOLANA_RPC_URL,
+        platformAddress,
+        tokenAddress,
+        network: process.env.ETHEREUM_NETWORK || 'localhost',
+        chainId: process.env.CHAIN_ID || 1337,
+        rpcUrl: process.env.ETHEREUM_RPC_URL || 'http://127.0.0.1:8545',
       },
     });
   } catch (error) {
